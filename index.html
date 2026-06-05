@@ -437,12 +437,48 @@ body {
     </div>
 
     <div class="bloque">
-      <div class="bloque-titulo t-azul">Daños en vehículos</div>
+      <div class="bloque-titulo t-azul">Vehículos involucrados</div>
       <div class="bloque-body">
-        <div class="fila col1">
-          <div class="campo"><label>Daños — Vehículo Nº 01</label><textarea id="acc-dano1" rows="3" placeholder="Detallar daños visibles del vehículo 1..."></textarea></div>
-          <div class="campo"><label>Daños — Vehículo Nº 02</label><textarea id="acc-dano2" rows="3" placeholder="Detallar daños visibles del vehículo 2..."></textarea></div>
+        <div class="fila col2" style="align-items:center;">
+          <div class="campo">
+            <label>Cantidad de vehículos</label>
+            <select id="acc-cant-vehiculos" onchange="actualizarVehiculos()">
+              <option value="0">— Seleccionar —</option>
+              <option value="1">1 vehículo</option>
+              <option value="2">2 vehículos</option>
+              <option value="3">3 vehículos</option>
+              <option value="4">4 vehículos</option>
+              <option value="5">5 vehículos</option>
+              <option value="6">6 vehículos</option>
+            </select>
+          </div>
         </div>
+        <div id="acc-vehiculos-container"></div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Víctimas</div>
+      <div class="bloque-body">
+        <div class="fila col2" style="align-items:center;">
+          <div class="campo">
+            <label>Cantidad de víctimas</label>
+            <select id="acc-cant-victimas" onchange="actualizarVictimas()">
+              <option value="0">— Sin víctimas —</option>
+              <option value="1">1 víctima</option>
+              <option value="2">2 víctimas</option>
+              <option value="3">3 víctimas</option>
+              <option value="4">4 víctimas</option>
+              <option value="5">5 víctimas</option>
+              <option value="6">6 víctimas</option>
+              <option value="7">7 víctimas</option>
+              <option value="8">8 víctimas</option>
+              <option value="9">9 víctimas</option>
+              <option value="10">10 víctimas</option>
+            </select>
+          </div>
+        </div>
+        <div id="acc-victimas-container"></div>
       </div>
     </div>
 
@@ -782,12 +818,16 @@ function enviarFormulario(tipo) {
       lp: document.getElementById('inc-lp').value
     };
   } else {
+    var vehiculos = recolectarVehiculos();
+    var victimas = recolectarVictimas();
     datos = {
       tipo_planilla: 'ACCIDENTE',
       fecha: document.getElementById('acc-fecha').value,
       tipo_accidente: document.getElementById('acc-tipo').value,
-      dano_vehiculo1: document.getElementById('acc-dano1').value,
-      dano_vehiculo2: document.getElementById('acc-dano2').value,
+      cant_vehiculos: document.getElementById('acc-cant-vehiculos').value,
+      vehiculos: JSON.stringify(vehiculos),
+      cant_victimas: document.getElementById('acc-cant-victimas').value,
+      victimas: JSON.stringify(victimas),
       visibilidad: getRadio('visibilidad'),
       pavimento: getRadio('pavimento'),
       iluminacion: getRadio('iluminacion'),
@@ -836,6 +876,68 @@ function mostrarToast(tipo) {
   t.classList.add('show');
   setTimeout(function() { t.classList.remove('show'); }, 4000);
 }
+function actualizarVehiculos() {
+  var cant = parseInt(document.getElementById('acc-cant-vehiculos').value) || 0;
+  var container = document.getElementById('acc-vehiculos-container');
+  container.innerHTML = '';
+  for (var i = 1; i <= cant; i++) {
+    var div = document.createElement('div');
+    div.style.cssText = 'border:1px solid var(--gris-borde);border-radius:var(--radio);padding:14px;margin-top:12px;background:var(--gris-input-bg);';
+    div.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Vehículo Nº ' + i + '</div>' +
+      '<div class="fila col2" style="margin-bottom:10px;">' +
+        '<div class="campo"><label>Patente</label><input type="text" id="acc-v' + i + '-patente" placeholder="ABC 123"></div>' +
+        '<div class="campo"><label>Marca</label><input type="text" id="acc-v' + i + '-marca"></div>' +
+      '</div>' +
+      '<div class="fila col1" style="margin-bottom:10px;">' +
+        '<div class="campo"><label>Modelo</label><input type="text" id="acc-v' + i + '-modelo"></div>' +
+      '</div>' +
+      '<div class="campo"><label>Daños</label><textarea id="acc-v' + i + '-danos" rows="2" placeholder="Describir daños visibles..."></textarea></div>';
+    container.appendChild(div);
+  }
+}
+
+function actualizarVictimas() {
+  var cant = parseInt(document.getElementById('acc-cant-victimas').value) || 0;
+  var container = document.getElementById('acc-victimas-container');
+  container.innerHTML = '';
+  for (var i = 1; i <= cant; i++) {
+    var div = document.createElement('div');
+    div.style.cssText = 'border:1px solid var(--gris-borde);border-radius:var(--radio);padding:14px;margin-top:12px;background:var(--gris-input-bg);';
+    div.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Víctima Nº ' + i + '</div>' +
+      '<div class="campo" style="margin-bottom:10px;"><label>Apellido y nombre</label><input type="text" id="acc-vic' + i + '-nombre" placeholder="Apellido, Nombre"></div>' +
+      '<div class="campo"><label>Lesiones</label><textarea id="acc-vic' + i + '-lesiones" rows="2" placeholder="Describir lesiones..."></textarea></div>';
+    container.appendChild(div);
+  }
+}
+
+function recolectarVehiculos() {
+  var cant = parseInt(document.getElementById('acc-cant-vehiculos').value) || 0;
+  var vehiculos = [];
+  for (var i = 1; i <= cant; i++) {
+    vehiculos.push({
+      patente: (document.getElementById('acc-v' + i + '-patente') || {}).value || '',
+      marca: (document.getElementById('acc-v' + i + '-marca') || {}).value || '',
+      modelo: (document.getElementById('acc-v' + i + '-modelo') || {}).value || '',
+      danos: (document.getElementById('acc-v' + i + '-danos') || {}).value || ''
+    });
+  }
+  return vehiculos;
+}
+
+function recolectarVictimas() {
+  var cant = parseInt(document.getElementById('acc-cant-victimas').value) || 0;
+  var victimas = [];
+  for (var i = 1; i <= cant; i++) {
+    victimas.push({
+      nombre: (document.getElementById('acc-vic' + i + '-nombre') || {}).value || '',
+      lesiones: (document.getElementById('acc-vic' + i + '-lesiones') || {}).value || ''
+    });
+  }
+  return victimas;
+}
+
 function exportarPDF(tipo) {
   var datos = {};
   if (tipo === 'inc') {
