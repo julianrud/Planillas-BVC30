@@ -546,7 +546,7 @@ body {
 // ⚙️  CONFIGURACIÓN — PEGÁ AQUÍ TU URL DE APPS SCRIPT
 // Instrucciones en el archivo backend_sheets.gs
 // ============================================================
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwLk6GV2SS3vSSn4a0UQoNh37VORYBELm35lPYHgglpdQlDcYUKSSIoX3VDGf30CwVr/exec";
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwr5naVKVxaVuMgVLyu5w-O5TsbI6JmfxnVdz_VC9Je1kaLiy7IuR7BST2t_-U0y9Ty/exec";
 
 // ============================================================
 // DATOS: PERSONAL
@@ -839,36 +839,26 @@ function enviarFormulario(tipo) {
     };
   }
 
-  // Envío via iframe oculto — funciona sin problemas de CORS con Apps Script
-  var iframeName = 'iframe_' + Date.now();
-  var iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
+  // Envío via URL encoded
+  var payloadStr = JSON.stringify(datos);
+  var encoded = 'payload=' + encodeURIComponent(payloadStr);
 
-  var formEl = document.createElement('form');
-  formEl.method = 'POST';
-  formEl.action = SCRIPT_URL;
-  formEl.target = iframeName;
-  formEl.style.display = 'none';
-
-  var input = document.createElement('input');
-  input.type = 'hidden';
-  input.name = 'payload';
-  input.value = JSON.stringify(datos);
-  formEl.appendChild(input);
-  document.body.appendChild(formEl);
-
-  iframe.onload = function() {
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: encoded
+  })
+  .then(function() {
     mostrarToast('ok');
     btn.disabled = false;
     btn.querySelector('span').textContent = 'Guardar registro en Google Sheets';
-    setTimeout(function() {
-      try { document.body.removeChild(iframe); document.body.removeChild(formEl); } catch(e) {}
-    }, 3000);
-  };
-
-  formEl.submit();
+  })
+  .catch(function() {
+    mostrarToast('err');
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Guardar registro en Google Sheets';
+  });
 }
 
 function mostrarToast(tipo) {
