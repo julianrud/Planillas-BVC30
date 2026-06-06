@@ -970,12 +970,16 @@ function exportarPDF(tipo) {
       lp: document.getElementById('inc-lp').value
     };
   } else {
+    var veh = recolectarVehiculos();
+    var vic = recolectarVictimas();
     datos = {
       tipo: 'ACCIDENTE',
       fecha: document.getElementById('acc-fecha').value,
       tipo_accidente: document.getElementById('acc-tipo').value,
-      dano1: document.getElementById('acc-dano1').value,
-      dano2: document.getElementById('acc-dano2').value,
+      cant_vehiculos: document.getElementById('acc-cant-vehiculos').value,
+      vehiculos: veh,
+      cant_victimas: document.getElementById('acc-cant-victimas').value,
+      victimas: vic,
       visibilidad: getRadio('visibilidad'),
       pavimento: getRadio('pavimento'),
       iluminacion: getRadio('iluminacion'),
@@ -1067,10 +1071,37 @@ function generarHTMLPlanilla(d) {
     cuerpo += campo('Tipo de accidente', d.tipo_accidente, '78%');
     cuerpo += '</div>';
 
-    cuerpo += seccion('Daños en vehículos', colorPrincipal);
-    cuerpo += '<div style="padding:0 0 4px;">';
-    cuerpo += campo('Daños — Vehículo Nº 01', d.dano1, '100%');
-    cuerpo += campo('Daños — Vehículo Nº 02', d.dano2, '100%');
+    cuerpo += seccion('Vehículos involucrados', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 8px;">';
+    if (d.vehiculos && d.vehiculos.length > 0) {
+      d.vehiculos.forEach(function(v, i) {
+        cuerpo += '<div style="border:1px solid #ddd;border-radius:4px;padding:10px;margin-bottom:8px;">';
+        cuerpo += '<div style="font-size:10px;font-weight:700;color:' + colorPrincipal + ';text-transform:uppercase;margin-bottom:6px;">Vehículo Nº ' + (i+1) + '</div>';
+        cuerpo += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+        cuerpo += campo('Patente', v.patente, '30%');
+        cuerpo += campo('Marca', v.marca, '30%');
+        cuerpo += campo('Modelo', v.modelo, '36%');
+        cuerpo += campo('Daños', v.danos, '100%');
+        cuerpo += '</div></div>';
+      });
+    } else {
+      cuerpo += '<div style="font-size:12px;color:#888;padding:6px 0;">Sin vehículos registrados</div>';
+    }
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Víctimas', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 8px;">';
+    if (d.victimas && d.victimas.length > 0) {
+      d.victimas.forEach(function(v, i) {
+        cuerpo += '<div style="border:1px solid #ddd;border-radius:4px;padding:10px;margin-bottom:8px;">';
+        cuerpo += '<div style="font-size:10px;font-weight:700;color:' + colorPrincipal + ';text-transform:uppercase;margin-bottom:6px;">Víctima Nº ' + (i+1) + '</div>';
+        cuerpo += campo('Apellido y nombre', v.nombre, '55%');
+        cuerpo += campo('Lesiones', v.lesiones, '43%');
+        cuerpo += '</div>';
+      });
+    } else {
+      cuerpo += '<div style="font-size:12px;color:#888;padding:6px 0;">Sin víctimas registradas</div>';
+    }
     cuerpo += '</div>';
 
     cuerpo += seccion('Condiciones del lugar', colorPrincipal);
