@@ -1,0 +1,1167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bomberos Voluntarios de Cañuelas — Planillas digitales</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --rojo: #B03020;
+  --rojo-hover: #8C2518;
+  --rojo-light: #FAF0EE;
+  --rojo-borde: #D9A090;
+  --azul: #1A4A6E;
+  --azul-hover: #123352;
+  --azul-light: #EEF4FA;
+  --azul-borde: #90B4D0;
+  --gris-bg: #F2F1EF;
+  --gris-card: #FAFAF8;
+  --gris-borde: #DDDBD6;
+  --gris-texto: #6B6860;
+  --gris-input-bg: #F7F6F3;
+  --negro: #1E1D1B;
+  --blanco: #FFFFFF;
+  --verde: #1E6B45;
+  --verde-light: #EAF5EE;
+  --radio: 5px;
+  --radio-lg: 10px;
+}
+body {
+  font-family: 'IBM Plex Sans', sans-serif;
+  background: var(--gris-bg);
+  color: var(--negro);
+  min-height: 100vh;
+  padding: 0 0 5rem;
+}
+
+/* HEADER */
+.header {
+  background: var(--negro);
+  padding: 18px 2rem;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.header-escudo {
+  width: 40px; height: 40px;
+  background: var(--rojo);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.header-escudo svg { width: 22px; height: 22px; fill: white; }
+.header-org { color: white; font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
+.header-sub { color: rgba(255,255,255,0.5); font-size: 11px; margin-top: 2px; font-family: 'IBM Plex Mono', monospace; }
+
+/* TABS */
+.tabs-bar {
+  background: var(--negro);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+  padding: 0 2rem;
+  display: flex;
+  gap: 0;
+}
+.tab-btn {
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 13px 20px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: rgba(255,255,255,0.45);
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+  letter-spacing: 0.01em;
+}
+.tab-btn:hover { color: rgba(255,255,255,0.8); }
+.tab-btn.active-inc { color: #EAA090; border-bottom-color: #EAA090; }
+.tab-btn.active-acc { color: #90C4E0; border-bottom-color: #90C4E0; }
+
+/* CONTENIDO */
+.content { max-width: 820px; margin: 0 auto; padding: 2rem 1rem; }
+
+.form-section { display: none; }
+.form-section.active { display: block; }
+
+/* FORM HEADER */
+.form-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 2rem; gap: 1rem;
+}
+.form-badge {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 4px 10px; border-radius: 3px;
+  display: inline-block; margin-bottom: 7px;
+}
+.badge-rojo { background: var(--rojo-light); color: var(--rojo); border: 1px solid var(--rojo-borde); }
+.badge-azul { background: var(--azul-light); color: var(--azul); border: 1px solid var(--azul-borde); }
+.form-titulo { font-size: 22px; font-weight: 600; color: var(--negro); line-height: 1.2; }
+.form-fecha-wrap label {
+  display: block; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--gris-texto); margin-bottom: 5px;
+}
+.form-fecha-wrap input {
+  font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+  border: 1px solid var(--gris-borde); border-radius: var(--radio);
+  padding: 8px 12px; background: var(--blanco); color: var(--negro);
+  outline: none; transition: border-color 0.15s;
+}
+.form-fecha-wrap input:focus { border-color: var(--rojo); }
+
+/* BLOQUES DE SECCIÓN */
+.bloque {
+  background: var(--blanco);
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio-lg);
+  margin-bottom: 1.25rem;
+  overflow: hidden;
+}
+.bloque-titulo {
+  font-size: 11px; font-weight: 600;
+  letter-spacing: 0.09em; text-transform: uppercase;
+  padding: 11px 18px;
+  border-bottom: 1px solid var(--gris-borde);
+}
+.bloque-titulo.t-rojo { color: var(--rojo); background: var(--rojo-light); }
+.bloque-titulo.t-azul { color: var(--azul); background: var(--azul-light); }
+.bloque-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+
+/* FILAS */
+.fila { display: grid; gap: 12px; }
+.col1 { grid-template-columns: 1fr; }
+.col2 { grid-template-columns: 1fr 1fr; }
+.col3 { grid-template-columns: 1fr 1fr 1fr; }
+.col2-1 { grid-template-columns: 2fr 1fr; }
+
+/* CAMPOS */
+.campo { display: flex; flex-direction: column; gap: 5px; }
+.campo label {
+  font-size: 11px; font-weight: 600; color: var(--gris-texto);
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.campo input[type="text"],
+.campo input[type="date"],
+.campo select,
+.campo textarea {
+  width: 100%;
+  font-family: 'IBM Plex Sans', sans-serif; font-size: 14px;
+  padding: 9px 11px;
+  border: 1px solid var(--gris-borde);
+  border-radius: var(--radio);
+  background: var(--gris-input-bg);
+  color: var(--negro); outline: none;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  appearance: none; -webkit-appearance: none;
+}
+.campo select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B6860' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+.campo input:focus, .campo select:focus, .campo textarea:focus {
+  border-color: var(--rojo); background: var(--blanco);
+  box-shadow: 0 0 0 3px rgba(176,48,32,0.08);
+}
+#form-accidentes .campo input:focus,
+#form-accidentes .campo select:focus,
+#form-accidentes .campo textarea:focus {
+  border-color: var(--azul);
+  box-shadow: 0 0 0 3px rgba(26,74,110,0.08);
+}
+.campo textarea { resize: vertical; min-height: 72px; line-height: 1.55; }
+
+/* CONDICIONES GRID */
+.cond-grid {
+  display: grid; grid-template-columns: 150px 1fr 1fr 1fr;
+  border: 1px solid var(--gris-borde); border-radius: var(--radio); overflow: hidden;
+}
+.cond-head {
+  background: var(--azul-light); color: var(--azul);
+  font-size: 11px; font-weight: 600; text-align: center;
+  padding: 9px 6px; letter-spacing: 0.05em; text-transform: uppercase;
+}
+.cond-head:first-child { text-align: left; padding-left: 14px; }
+.cond-cell {
+  padding: 10px 6px;
+  display: flex; align-items: center; justify-content: center;
+  border-top: 1px solid var(--gris-borde);
+}
+.cond-cell.label-cell {
+  justify-content: flex-start; padding-left: 14px;
+  font-size: 14px; font-weight: 500; color: var(--negro);
+}
+.cond-cell.par { background: #FAFAF8; }
+.cond-cell input[type="radio"] {
+  width: 16px; height: 16px; accent-color: var(--azul); cursor: pointer;
+}
+
+/* BOTÓN SUBMIT */
+.submit-wrap { margin-top: 1.75rem; }
+.submit-btn {
+  width: 100%; padding: 14px;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-size: 14px; font-weight: 600;
+  border: none; border-radius: var(--radio);
+  cursor: pointer; letter-spacing: 0.03em;
+  transition: background 0.15s, transform 0.1s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.submit-btn:active { transform: scale(0.99); }
+.btn-rojo { background: var(--rojo); color: white; }
+.btn-rojo:hover { background: var(--rojo-hover); }
+.btn-azul { background: var(--azul); color: white; }
+.btn-azul:hover { background: var(--azul-hover); }
+.btn-rojo:disabled, .btn-azul:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  padding: 13px 20px; border-radius: var(--radio);
+  font-size: 14px; font-weight: 500;
+  display: flex; align-items: center; gap: 9px;
+  opacity: 0; transform: translateY(14px);
+  transition: opacity 0.3s, transform 0.3s;
+  pointer-events: none; z-index: 999;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  max-width: 340px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast-ok { background: var(--verde); color: white; }
+.toast-err { background: #8C2518; color: white; }
+
+/* ALERTA CONFIG */
+.alerta-config {
+  background: #FFF8E6; border: 1px solid #E8C840;
+  border-radius: var(--radio-lg); padding: 14px 18px;
+  margin-bottom: 1.5rem; font-size: 13px; color: #5C4800;
+  display: flex; gap: 10px; align-items: flex-start;
+  line-height: 1.55;
+}
+.alerta-config strong { font-weight: 600; }
+.alerta-config code {
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  background: rgba(0,0,0,0.07); padding: 1px 6px; border-radius: 3px;
+}
+
+@media (max-width: 600px) {
+  .col2, .col3, .col2-1 { grid-template-columns: 1fr; }
+  .form-head { flex-direction: column; }
+  .cond-grid { grid-template-columns: 110px 1fr 1fr 1fr; }
+  .content { padding: 1.25rem 0.75rem; }
+  .header { padding: 14px 1rem; }
+  .tabs-bar { padding: 0 1rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-escudo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6 2 4 8 4 12c0 5 3.5 8 8 8s8-3 8-8c0-4-2-10-8-10zm0 14c-2.2 0-4-1.8-4-4 0-1.5 1-3.5 2-5 .5 1.5 1.5 2.5 2 3 .5-1 .5-2.5.5-3.5 1 1.5 1.5 3.5 1.5 5.5 0 2.2-1.8 4-4 4z"/></svg>
+  </div>
+  <div>
+    <div class="header-org">Bomberos Voluntarios de Cañuelas</div>
+    <div class="header-sub">Sistema de registro digital de siniestros</div>
+  </div>
+</div>
+
+<div class="tabs-bar">
+  <button class="tab-btn active-inc" id="tab-inc" onclick="switchTab('inc')">🔥 Planilla de incendios</button>
+  <button class="tab-btn" id="tab-acc" onclick="switchTab('acc')">🚗 Planilla de accidentes</button>
+</div>
+
+<div class="content">
+
+  <!-- ALERTA DE CONFIGURACIÓN -->
+  <div class="alerta-config" id="alerta-config">
+    <span>⚙️</span>
+    <div>
+      <strong>Configuración requerida:</strong> Para que los datos se guarden en Google Sheets, completá la variable <code>SCRIPT_URL</code> al inicio del código JavaScript de este archivo con la URL de tu Apps Script desplegado. Las instrucciones están incluidas en el archivo <strong>backend_sheets.gs</strong>.
+    </div>
+  </div>
+
+  <!-- ====== FORMULARIO INCENDIOS ====== -->
+  <div class="form-section active" id="form-inc">
+
+    <div class="form-head">
+      <div>
+        <div class="form-badge badge-rojo">Emergencia · Servicio 01</div>
+        <div class="form-titulo">Planilla de incendios</div>
+      </div>
+      <div class="form-fecha-wrap">
+        <label>Fecha</label>
+        <input type="date" id="inc-fecha">
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Tipo de siniestro</div>
+      <div class="bloque-body">
+        <div class="fila col1">
+          <div class="campo">
+            <label>Tipo de incendio (clasificación / código)</label>
+            <select id="inc-tipo"></select>
+          </div>
+        </div>
+        <div class="fila col1">
+          <div class="campo"><label>Domicilio</label><input type="text" id="inc-domicilio" placeholder="Dirección completa"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Datos del morador / propietario</div>
+      <div class="bloque-body">
+        <div class="fila col2">
+          <div class="campo"><label>Apellido y nombre del morador</label><input type="text" id="inc-morador"></div>
+          <div class="campo"><label>Documento (DNI / LC / LE) Nº</label><input type="text" id="inc-documento"></div>
+        </div>
+        <div class="fila col3">
+          <div class="campo">
+            <label>Habita en calidad de</label>
+            <select id="inc-calidad">
+              <option value="">— Seleccionar —</option>
+              <option>Propietario</option><option>Inquilino</option>
+              <option>Ocupante</option><option>Otro</option>
+            </select>
+          </div>
+          <div class="campo"><label>Dimensiones (m²)</label><input type="text" id="inc-dimensiones"></div>
+          <div class="campo"><label>Construcción de</label><input type="text" id="inc-construccion" placeholder="Material, madera, mixta..."></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Causas y daños</div>
+      <div class="bloque-body">
+        <div class="fila col1">
+          <div class="campo"><label>Causas del siniestro</label><textarea id="inc-causas" placeholder="Describir causas conocidas o presuntas..."></textarea></div>
+        </div>
+        <div class="fila col2">
+          <div class="campo"><label>Daños</label><textarea id="inc-danos" placeholder="Descripción de los daños..."></textarea></div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div class="campo"><label>Seguro (aseguradora / Nº póliza)</label><input type="text" id="inc-seguro"></div>
+            <div class="campo"><label>Ubicación del fuego</label><input type="text" id="inc-ubicacion-fuego" placeholder="Lugar específico del inicio"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Recursos y autoridades</div>
+      <div class="bloque-body">
+        <div class="fila col2">
+          <div class="campo"><label>Cantidad de dotaciones</label><input type="text" id="inc-dotaciones"></div>
+          <div class="campo"><label>Material empleado</label><textarea id="inc-material" style="min-height:50px"></textarea></div>
+        </div>
+        <div class="fila col2">
+          <div class="campo"><label>Autoridad policial a cargo</label><input type="text" id="inc-autoridad"></div>
+          <div class="campo"><label>Nº móvil policial</label><input type="text" id="inc-movil-pol"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Víctimas</div>
+      <div class="bloque-body">
+        <div class="fila col2">
+          <div class="campo"><label>Cantidad de víctimas</label><input type="text" id="inc-victimas"></div>
+          <div class="campo"><label>Traslado al</label><input type="text" id="inc-traslado" placeholder="Centro de salud / hospital..."></div>
+        </div>
+        <div class="fila col3">
+          <div class="campo"><label>Móvil ambulancia</label><input type="text" id="inc-ambulancia"></div>
+          <div class="campo"><label>Médico tratante</label><input type="text" id="inc-medico"></div>
+          <div class="campo"><label>Matrícula médico</label><input type="text" id="inc-matricula"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Observaciones</div>
+      <div class="bloque-body">
+        <div class="campo"><textarea id="inc-obs" rows="4" placeholder="Observaciones adicionales..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-rojo">Responsable de la toma de datos</div>
+      <div class="bloque-body">
+        <div class="fila col3">
+          <div class="campo"><label>Apellido y nombre</label><select id="inc-responsable"></select></div>
+          <div class="campo"><label>Grado</label><input type="text" id="inc-grado" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+          <div class="campo"><label>Nº L.P.</label><input type="text" id="inc-lp" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap" style="display:flex;gap:10px;">
+      <button class="submit-btn btn-rojo" id="btn-inc" onclick="enviarFormulario('inc')" style="flex:1">
+        <span>Guardar en Google Sheets</span>
+      </button>
+      <button class="submit-btn" onclick="exportarPDF('inc')" style="flex:0 0 auto;width:auto;padding:14px 20px;background:#3D3B37;color:white;">
+        <span>📄 Exportar PDF</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ====== FORMULARIO ACCIDENTES ====== -->
+  <div class="form-section" id="form-acc">
+
+    <div class="form-head">
+      <div>
+        <div class="form-badge badge-azul">Emergencia · Servicio 02</div>
+        <div class="form-titulo">Planilla de accidentes de tránsito</div>
+      </div>
+      <div class="form-fecha-wrap">
+        <label>Fecha</label>
+        <input type="date" id="acc-fecha">
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Tipo de siniestro</div>
+      <div class="bloque-body">
+        <div class="campo">
+          <label>Tipo de accidente (clasificación / código)</label>
+          <select id="acc-tipo"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Vehículos involucrados</div>
+      <div class="bloque-body">
+        <div class="fila col2" style="align-items:center;">
+          <div class="campo">
+            <label>Cantidad de vehículos</label>
+            <select id="acc-cant-vehiculos" onchange="actualizarVehiculos()">
+              <option value="0">— Seleccionar —</option>
+              <option value="1">1 vehículo</option>
+              <option value="2">2 vehículos</option>
+              <option value="3">3 vehículos</option>
+              <option value="4">4 vehículos</option>
+              <option value="5">5 vehículos</option>
+              <option value="6">6 vehículos</option>
+            </select>
+          </div>
+        </div>
+        <div id="acc-vehiculos-container"></div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Víctimas</div>
+      <div class="bloque-body">
+        <div class="fila col2" style="align-items:center;">
+          <div class="campo">
+            <label>Cantidad de víctimas</label>
+            <select id="acc-cant-victimas" onchange="actualizarVictimas()">
+              <option value="0">— Sin víctimas —</option>
+              <option value="1">1 víctima</option>
+              <option value="2">2 víctimas</option>
+              <option value="3">3 víctimas</option>
+              <option value="4">4 víctimas</option>
+              <option value="5">5 víctimas</option>
+              <option value="6">6 víctimas</option>
+              <option value="7">7 víctimas</option>
+              <option value="8">8 víctimas</option>
+              <option value="9">9 víctimas</option>
+              <option value="10">10 víctimas</option>
+            </select>
+          </div>
+        </div>
+        <div id="acc-victimas-container"></div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Condiciones del lugar</div>
+      <div class="bloque-body">
+        <div class="cond-grid">
+          <div class="cond-head">Condición</div>
+          <div class="cond-head">Buena</div>
+          <div class="cond-head">Regular</div>
+          <div class="cond-head">Mala</div>
+          <div class="cond-cell label-cell par">Visibilidad</div>
+          <div class="cond-cell par"><input type="radio" name="visibilidad" value="Buena"></div>
+          <div class="cond-cell par"><input type="radio" name="visibilidad" value="Regular"></div>
+          <div class="cond-cell par"><input type="radio" name="visibilidad" value="Mala"></div>
+          <div class="cond-cell label-cell">Pavimento</div>
+          <div class="cond-cell"><input type="radio" name="pavimento" value="Bueno"></div>
+          <div class="cond-cell"><input type="radio" name="pavimento" value="Regular"></div>
+          <div class="cond-cell"><input type="radio" name="pavimento" value="Malo"></div>
+          <div class="cond-cell label-cell par">Iluminación</div>
+          <div class="cond-cell par"><input type="radio" name="iluminacion" value="Buena"></div>
+          <div class="cond-cell par"><input type="radio" name="iluminacion" value="Regular"></div>
+          <div class="cond-cell par"><input type="radio" name="iluminacion" value="Mala"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Material y observaciones</div>
+      <div class="bloque-body">
+        <div class="campo"><label>Material utilizado</label><textarea id="acc-material" rows="3" placeholder="Material y equipos utilizados en la intervención..."></textarea></div>
+        <div class="campo"><label>Observaciones adicionales</label><textarea id="acc-obs" rows="4" placeholder="Observaciones..."></textarea></div>
+      </div>
+    </div>
+
+    <div class="bloque">
+      <div class="bloque-titulo t-azul">Responsable de la toma de datos</div>
+      <div class="bloque-body">
+        <div class="fila col3">
+          <div class="campo"><label>Apellido y nombre</label><select id="acc-responsable"></select></div>
+          <div class="campo"><label>Grado</label><input type="text" id="acc-grado" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+          <div class="campo"><label>Nº L.P.</label><input type="text" id="acc-lp" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="submit-wrap" style="display:flex;gap:10px;">
+      <button class="submit-btn btn-azul" id="btn-acc" onclick="enviarFormulario('acc')" style="flex:1">
+        <span>Guardar en Google Sheets</span>
+      </button>
+      <button class="submit-btn" onclick="exportarPDF('acc')" style="flex:0 0 auto;width:auto;padding:14px 20px;background:#3D3B37;color:white;">
+        <span>📄 Exportar PDF</span>
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOASTS -->
+<div class="toast toast-ok" id="toast-ok">✓ Registro guardado correctamente en Google Sheets</div>
+<div class="toast toast-err" id="toast-err">✗ Error al guardar. Verificá la URL del script.</div>
+
+<script>
+// ============================================================
+// ⚙️  CONFIGURACIÓN — PEGÁ AQUÍ TU URL DE APPS SCRIPT
+// Instrucciones en el archivo backend_sheets.gs
+// ============================================================
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwr5naVKVxaVuMgVLyu5w-O5TsbI6JmfxnVdz_VC9Je1kaLiy7IuR7BST2t_-U0y9Ty/exec";
+
+// ============================================================
+// DATOS: PERSONAL
+// ============================================================
+var PERSONAL = [
+  { nombre: "Coronel, Pablo",       grado: "OF. Auxiliar",       lp: "30/0244" },
+  { nombre: "Gimenez, Jonatan",     grado: "OF. Auxiliar",       lp: "30/0157" },
+  { nombre: "Ortiz, Hernan",        grado: "OF. Auxiliar",       lp: "30/0092" },
+  { nombre: "Cocini, Maximiliano",  grado: "Ayudante Mayor",     lp: "30/0354" },
+  { nombre: "Vicente, Guillermo",   grado: "Ayudante Mayor",     lp: "30/0166" },
+  { nombre: "Benigni, Jonatan",     grado: "Ayudante Mayor",     lp: "30/0202" },
+  { nombre: "Larrosa, Maximiliano", grado: "Ayudante Mayor",     lp: "30/0207" },
+  { nombre: "Geiser, Eduardo",      grado: "Ayudante Mayor",     lp: "30/0152" },
+  { nombre: "Bonavita, Damian",     grado: "Ayudante Principal", lp: "30/0104" },
+  { nombre: "Toledo, Emiliano",     grado: "Ayudante Principal", lp: "30/0179" },
+  { nombre: "Mansilla, Mailen",     grado: "Ayudante Principal", lp: "30/0257" },
+  { nombre: "Lopez, Maximiliano",   grado: "Ayudante de 1°",     lp: "30/0232" },
+  { nombre: "Cordovero, Pablo",     grado: "Ayudante de 1°",     lp: "30/0154" },
+  { nombre: "Giacobino, Sebastian", grado: "Ayudante de 1°",     lp: "30/0136" },
+  { nombre: "Matrelo, Nicolas",     grado: "Ayudante de 1°",     lp: "30/0188" },
+  { nombre: "Peralta, Jose Luis",   grado: "Ayudante de 1°",     lp: "30/0156" },
+  { nombre: "Ludueña, Osvaldo",     grado: "Ayudante de 1°",     lp: "30/0206" },
+  { nombre: "Ferrer, Juan Carlos",  grado: "Ayudante",           lp: "30/0190" },
+  { nombre: "Bordon, Jose",         grado: "Ayudante",           lp: "30/0268" },
+  { nombre: "Bugari, Alex",         grado: "Ayudante",           lp: "30/0289" },
+  { nombre: "Antonio, Agustina",    grado: "Subayudante",        lp: "30/0292" },
+  { nombre: "Maidana, Sebastian",   grado: "Subayudante",        lp: "30/0302" },
+  { nombre: "Sanchez, Tamara",      grado: "Subayudante",        lp: "30/0312" },
+  { nombre: "Tellechea, Milagros",  grado: "Subayudante",        lp: "30/0275" },
+  { nombre: "Martinez, Silvio",     grado: "Subayudante",        lp: "30/0109" },
+  { nombre: "Yuli, Luis Alberto",   grado: "Bombero",            lp: "30/0052" },
+  { nombre: "García, Juan Pablo",   grado: "Bombero",            lp: "30/0139" },
+  { nombre: "Amuchastegui, Daniel", grado: "Bombero",            lp: "30/0151" },
+  { nombre: "Rosas, Luis",          grado: "Bombero",            lp: "30/0172" },
+  { nombre: "Rosas, Pedro",         grado: "Bombero",            lp: "30/0175" },
+  { nombre: "Jaime, Mauro",         grado: "Bombero",            lp: "30/0124" },
+  { nombre: "Domínguez, Cristian",  grado: "Bombero",            lp: "30/0183" },
+  { nombre: "Rodríguez, Sebastián", grado: "Bombero",            lp: "30/0159" },
+  { nombre: "Tellechea, Leonardo",  grado: "Bombero",            lp: "30/0054" },
+  { nombre: "Barragan, Javier",     grado: "Bombero",            lp: "30/0143" },
+  { nombre: "Bohler, Damian",       grado: "Bombero",            lp: "30/0213" },
+  { nombre: "Ferrandi, Mauro",      grado: "Bombero",            lp: "30/0093" },
+  { nombre: "Velozo, Javier",       grado: "Bombero",            lp: "30/0087" },
+  { nombre: "Rasquetti, Marcos",    grado: "Bombero",            lp: "30/0195" },
+  { nombre: "Montovio, Mariano",    grado: "Bombero",            lp: "30/0086" },
+  { nombre: "Salerno, Yamila",      grado: "Bombero",            lp: "30/0283" },
+  { nombre: "Bugari, Dylan",        grado: "Bombero",            lp: "30/0285" },
+  { nombre: "Silva, Jonathan",      grado: "Bombero",            lp: "30/0252" },
+  { nombre: "Roldan, Nicolas",      grado: "Bombero",            lp: "30/0187" },
+  { nombre: "Piñeiro, Daniel",      grado: "Bombero",            lp: "30/0308" },
+  { nombre: "Brito, Franco",        grado: "Bombero",            lp: "30/0320" },
+  { nombre: "Antilef, Jorge",       grado: "Bombero",            lp: "30/0321" },
+  { nombre: "Cardiello, Elias",     grado: "Bombero",            lp: "30/0322" },
+  { nombre: "Mujica, Sabrina",      grado: "Bombero",            lp: "30/0323" },
+  { nombre: "Higa, Nestor",         grado: "Bombero",            lp: "30/0325" },
+  { nombre: "Coronel, Camila",      grado: "Bombero",            lp: "30/0326" },
+  { nombre: "Rivero Lodoli, Jorge", grado: "Bombero",            lp: "30/0332" },
+  { nombre: "Cordovero, Tomas",     grado: "Bombero",            lp: "30/0243" },
+  { nombre: "Bordon, Nestor",       grado: "Bombero",            lp: "30/0264" },
+  { nombre: "Lopez, Matias",        grado: "Bombero",            lp: "30/0338" },
+  { nombre: "Monzon, Alejandra",    grado: "Bombero",            lp: "30/0344" },
+  { nombre: "Guillermo, Daiana",    grado: "Bombero",            lp: "30/0349" },
+  { nombre: "Perez Loayza, Fiamma", grado: "Bombero",            lp: "30/0350" },
+  { nombre: "Colchado, Lucas",      grado: "Bombero",            lp: "30/0219" },
+  { nombre: "Smith, Cecilia",       grado: "Bombero",            lp: "30/0358" },
+  { nombre: "Stur, Gaston",         grado: "Bombero",            lp: "30/0360" },
+  { nombre: "Ovelar, Gretel Mayra", grado: "Bombero",            lp: "30/0361" },
+  { nombre: "Tojo, Fernando",       grado: "Bombero",            lp: "30/0362" },
+  { nombre: "Avalos, Melania",      grado: "Bombero",            lp: "30/0363" },
+  { nombre: "Rios, Camila",         grado: "Bombero",            lp: "30/0364" },
+  { nombre: "Diaz, Samira",         grado: "Bombero",            lp: "30/0367" },
+  { nombre: "Mujica, Alexander",    grado: "Bombero",            lp: "30/0370" },
+  { nombre: "Rodriguez, Sol Morena",grado: "Bombero",            lp: "30/0371" },
+  { nombre: "Maidana, Facundo",     grado: "Bombero",            lp: "30/0374" },
+  { nombre: "Quest, Estefania",     grado: "Bombero",            lp: "30/0375" },
+  { nombre: "Guercio, Oscar",       grado: "Bombero",            lp: "30/0376" },
+  { nombre: "Risso, Tobias",        grado: "Bombero",            lp: "30/0377" },
+  { nombre: "Fernandez, Oscar",     grado: "Bombero",            lp: "30/0379" },
+  { nombre: "Leyva, Veronica",      grado: "Bombero",            lp: "30/0381" },
+  { nombre: "Loseco, Ezequiel",     grado: "Bombero",            lp: "30/0383" },
+  { nombre: "Mancilla, Lucas",      grado: "Bombero",            lp: "30/0384" },
+  { nombre: "Fernandez, Facundo",   grado: "Bombero",            lp: "30/0324" },
+  { nombre: "Villalba, Mariana",    grado: "Bombero",            lp: "30/0319" },
+  { nombre: "Rosas, Federico",      grado: "Bombero",            lp: "30/0239" },
+  { nombre: "Hipolito, Ailen",      grado: "Bombero",            lp: "30/0341" },
+  { nombre: "Valenzuela, Joel",     grado: "Bombero",            lp: "30/0385" },
+  { nombre: "Cabanillas, Jonathan", grado: "Bombero",            lp: "30/0248" },
+  { nombre: "Piedra, Emanuel",      grado: "Bombero",            lp: "30/0386" },
+  { nombre: "Tito, Bruno",          grado: "Bombero",            lp: "30/0388" },
+  { nombre: "Suarez, Facundo",      grado: "Bombero",            lp: "30/0305" },
+  { nombre: "Lopez, Facundo",       grado: "Bombero",            lp: "30/0213" }
+];
+
+var TIPOS_INCENDIO = [
+  "01-EDILICIO-1 | Vivienda individual","01-EDILICIO-2 | Vivienda multifamiliar",
+  "01-EDILICIO-3 | Edificio de más de 3 pisos","01-EDILICIO-4 | Vivienda precaria",
+  "01-EDILICIO-5 | Edificio público","01-EDILICIO-6 | Comercio",
+  "01-EDILICIO-7 | Galería comercial","01-EDILICIO-8 | Oficina",
+  "01-EDILICIO-9 | Supermercado mayorista","01-EDILICIO-10 | Hoteles",
+  "01-EDILICIO-11 | Quincho","01-EDILICIO-12 | Gimnasio",
+  "01-EDILICIO-13 | Hospital","01-EDILICIO-14 | Centro de salud",
+  "01-EDILICIO-15 | Clínica/Sanatorio","01-EDILICIO-16 | Escuela",
+  "01-EDILICIO-17 | Cine","01-EDILICIO-18 | Teatro","01-EDILICIO-19 | Estadios",
+  "01-EDILICIO-20 | Panaderías/Confiterías","01-EDILICIO-21 | Bares/Pub",
+  "01-EDILICIO-22 | Restaurant","01-EDILICIO-23 | Templos/Iglesias",
+  "01-EDILICIO-24 | Garages","01-EDILICIO-25 | Depósitos públicos",
+  "01-EDILICIO-26 | Cuarteles militares","01-EDILICIO-27 | Dependencias policiales",
+  "01-EDILICIO-28 | Industrias","01-EDILICIO-29 | Laboratorios",
+  "01-EDILICIO-30 | Plantas nucleares","01-EDILICIO-31 | Talleres",
+  "01-EDILICIO-32 | Logísticas","01-EDILICIO-33 | Droguerías",
+  "01-EDILICIO-34 | Farmacias","01-EDILICIO-35 | Viveros",
+  "01-EDILICIO-36 | Obra en construcción","01-EDILICIO-37 | Obrador",
+  "01-EDILICIO-38 | Sede sindical","01-EDILICIO-39 | Locales bailables",
+  "01-EDILICIO-40 | Depósito/Galpón","01-EDILICIO-41 | Hogar de niños/Geriátricos",
+  "01-EDILICIO-42 | Entidad bancaria","01-EDILICIO-43 | Cajeros automáticos",
+  "01-EDILICIO-44 | Stud/Caballeriza","01-EDILICIO-45 | Establecimiento agrícola",
+  "01-EDILICIO-46 | Establecimiento ganadero","01-EDILICIO-47 | Establecimiento avícola",
+  "01-EDILICIO-48 | Dependencias portuarias","01-EDILICIO-49 | Astilleros",
+  "01-EDILICIO-50 | Guarderías náuticas","01-EDILICIO-51 | Aeropuertos",
+  "01-EDILICIO-52 | Aero clubes","01-EDILICIO-53 | Depósitos ferroviarios",
+  "01-EDILICIO-54 | Molino harinero","01-EDILICIO-55 | Otros edilicio",
+  "01-ELECTRICO-56 | Tablero eléctrico","01-ELECTRICO-57 | Tendido eléctrico",
+  "01-ELECTRICO-58 | Usina eléctrica","01-ELECTRICO-59 | Sub estación eléctrica",
+  "01-ELECTRICO-60 | Transformador","01-ELECTRICO-61 | Poste de luz",
+  "01-AGRICOLA-62 | Fardos","01-AGRICOLA-63 | Rollos","01-AGRICOLA-64 | Silos",
+  "01-AGRICOLA-65 | Silos bolsa","01-AGRICOLA-66 | Silos de forrajes",
+  "01-AGRICOLA-67 | Secadora de silos","01-AGRICOLA-68 | Tambos","01-AGRICOLA-69 | Otros agrícola",
+  "01-VEHICULAR-70 | Maquinaria vial","01-VEHICULAR-71 | Maquinaria agrícola",
+  "01-VEHICULAR-72 | Automóvil","01-VEHICULAR-73 | Pick up",
+  "01-VEHICULAR-74 | Micro ómnibus","01-VEHICULAR-75 | Mini bus",
+  "01-VEHICULAR-76 | Camión","01-VEHICULAR-77 | Camión de cargas gral.",
+  "01-VEHICULAR-78 | Camión cisterna","01-VEHICULAR-79 | Cargas especiales",
+  "01-VEHICULAR-80 | Camión militar","01-VEHICULAR-81 | Casas rodantes",
+  "01-VEHICULAR-82 | Tractor vehículo utilitario","01-VEHICULAR-83 | Vehículos agrícolas",
+  "01-VEHICULAR-84 | Formación ferroviaria","01-VEHICULAR-85 | Motocicleta","01-VEHICULAR-86 | Otros vehicular",
+  "01-NAUTICO-87 | Embarcación en gral.","01-NAUTICO-88 | Incendios de buques","01-NAUTICO-89 | Otros náutico",
+  "01-AERONAVE-90 | Avión en gral.","01-AERONAVE-91 | Helicópteros",
+  "01-AERONAVE-92 | Helicópteros militares","01-AERONAVE-93 | Globos aerostáticos","01-AERONAVE-94 | Otros aeronave",
+  "01-HIDROCARBURO-95 | Oleoducto","01-HIDROCARBURO-96 | Gaseoducto","01-HIDROCARBURO-97 | Poliducto",
+  "01-HIDROCARBURO-98 | Depósito de combustibles","01-HIDROCARBURO-99 | Estación de servicio",
+  "01-HIDROCARBURO-100 | Planta reguladora de gas","01-HIDROCARBURO-101 | Garrafa/Estación de carga","01-HIDROCARBURO-102 | Otros hidrocarburo",
+  "01-MISC-103 | Carpa/Gazebo","01-MISC-104 | Pirotecnia","01-MISC-105 | Caldera",
+  "01-MISC-106 | Basural","01-MISC-107 | Contenedor","01-MISC-108 | Cesto de basura","01-MISC-109 | Otros misceláneas",
+  "01-VARIOS-110 | Falsa alarma","01-VARIOS-111 | Servicio sin efecto","01-VARIOS-112 | Otros varios",
+  "10-QUIMICO-1 | Incendio mat-pel","10-QUIMICO-2 | Derrame mat-pel","10-QUIMICO-3 | Explosiones",
+  "10-QUIMICO-4 | Prevención por mat-pel","10-QUIMICO-5 | Otros químico","10-QUIMICO-6 | Escape de gas",
+  "11-FORESTAL-1 | Pastizales","11-FORESTAL-2 | Matorrales","11-FORESTAL-3 | Campos",
+  "11-FORESTAL-4 | Pajonales","11-FORESTAL-5 | Bañados","11-FORESTAL-6 | Banquinas","11-FORESTAL-7 | Otros pastizal",
+  "11-FORESTAL-8 | Monte","11-FORESTAL-9 | Islas","11-FORESTAL-10 | Cerros/Montañas",
+  "11-FORESTAL-11 | Reserva natural","11-FORESTAL-12 | Parques nacionales",
+  "11-FORESTAL-13 | Rastrojo","11-FORESTAL-14 | Sembradíos","11-FORESTAL-15 | Otros forestación",
+  "11-FORESTAL-16 | Incendio de interfaz","11-FORESTAL-17 | Otros interfaz"
+];
+
+var TIPOS_ACCIDENTE = [
+  "02-TRASLADO-1 | Traslado de accidentado","02-TRASLADO-2 | Salvamento de accidentado",
+  "02-TRASLADO-3 | Parturienta","02-TRASLADO-4 | Otros traslado",
+  "02-RESCATE-5 | Rescate de persona","02-RESCATE-6 | Rescate en gral.",
+  "02-RESCATE-7 | Recuperación de cadáver","02-RESCATE-8 | Persona atrapada en ascensor","02-RESCATE-9 | Otros rescate",
+  "02-ACCIDENTE-10 | Accidente ciclista","02-ACCIDENTE-11 | Accidente motociclista",
+  "02-ACCIDENTE-12 | Accidente vehicular","02-ACCIDENTE-13 | Accidente aéreo",
+  "02-ACCIDENTE-14 | Accidente náutico","02-ACCIDENTE-15 | Accidente ferroviario",
+  "02-ACCIDENTE-16 | Accidente ecuestre","02-ACCIDENTE-17 | Otros accidente",
+  "02-CATASTROFE-18 | Derrumbes","02-CATASTROFE-19 | Inundaciones",
+  "02-CATASTROFE-20 | Voladuras de techos","02-CATASTROFE-21 | Otros catástrofe",
+  "02-AMENAZA-22 | Artefacto explosivo","02-AMENAZA-23 | Otros amenaza"
+];
+
+// ============================================================
+// INIT
+// ============================================================
+function poblarSelect(id, opciones) {
+  var sel = document.getElementById(id);
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  opciones.forEach(function(op) {
+    var o = document.createElement('option');
+    o.value = op; o.textContent = op;
+    sel.appendChild(o);
+  });
+}
+
+function poblarPersonal(selectId, gradoId, lpId) {
+  var sel = document.getElementById(selectId);
+  sel.innerHTML = '<option value="">— Seleccionar —</option>';
+  PERSONAL.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.nombre;
+    o.textContent = p.nombre + ' (' + p.grado + ')';
+    o.dataset.grado = p.grado;
+    o.dataset.lp = p.lp;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', function() {
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById(gradoId).value = opt.dataset.grado || '';
+    document.getElementById(lpId).value = opt.dataset.lp || '';
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  var hoy = new Date().toISOString().split('T')[0];
+  document.getElementById('inc-fecha').value = hoy;
+  document.getElementById('acc-fecha').value = hoy;
+
+  poblarSelect('inc-tipo', TIPOS_INCENDIO);
+  poblarSelect('acc-tipo', TIPOS_ACCIDENTE);
+  poblarPersonal('inc-responsable', 'inc-grado', 'inc-lp');
+  poblarPersonal('acc-responsable', 'acc-grado', 'acc-lp');
+
+  if (SCRIPT_URL !== "PEGAR_URL_AQUI") {
+    document.getElementById('alerta-config').style.display = 'none';
+  }
+});
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(cual) {
+  ['inc','acc'].forEach(function(t) {
+    document.getElementById('form-' + t).classList.remove('active');
+    document.getElementById('tab-' + t).className = 'tab-btn';
+  });
+  document.getElementById('form-' + cual).classList.add('active');
+  document.getElementById('tab-' + cual).className = 'tab-btn active-' + cual;
+}
+
+// ============================================================
+// ENVÍO A GOOGLE SHEETS
+// ============================================================
+function getRadio(name) {
+  var r = document.querySelector('input[name="' + name + '"]:checked');
+  return r ? r.value : '';
+}
+
+function enviarFormulario(tipo) {
+  var btn = document.getElementById('btn-' + tipo);
+  btn.disabled = true;
+  btn.querySelector('span').textContent = 'Guardando...';
+
+  var datos = {};
+
+  if (tipo === 'inc') {
+    datos = {
+      tipo_planilla: 'INCENDIO',
+      fecha: document.getElementById('inc-fecha').value,
+      tipo_incendio: document.getElementById('inc-tipo').value,
+      domicilio: document.getElementById('inc-domicilio').value,
+      morador: document.getElementById('inc-morador').value,
+      documento: document.getElementById('inc-documento').value,
+      calidad: document.getElementById('inc-calidad').value,
+      dimensiones: document.getElementById('inc-dimensiones').value,
+      construccion: document.getElementById('inc-construccion').value,
+      causas: document.getElementById('inc-causas').value,
+      danos: document.getElementById('inc-danos').value,
+      seguro: document.getElementById('inc-seguro').value,
+      ubicacion_fuego: document.getElementById('inc-ubicacion-fuego').value,
+      dotaciones: document.getElementById('inc-dotaciones').value,
+      material: document.getElementById('inc-material').value,
+      autoridad: document.getElementById('inc-autoridad').value,
+      movil_policial: document.getElementById('inc-movil-pol').value,
+      victimas: document.getElementById('inc-victimas').value,
+      traslado: document.getElementById('inc-traslado').value,
+      ambulancia: document.getElementById('inc-ambulancia').value,
+      medico: document.getElementById('inc-medico').value,
+      matricula: document.getElementById('inc-matricula').value,
+      observaciones: document.getElementById('inc-obs').value,
+      responsable: document.getElementById('inc-responsable').value,
+      grado: document.getElementById('inc-grado').value,
+      lp: document.getElementById('inc-lp').value
+    };
+  } else {
+    var vehiculos = recolectarVehiculos();
+    var victimas = recolectarVictimas();
+    datos = {
+      tipo_planilla: 'ACCIDENTE',
+      fecha: document.getElementById('acc-fecha').value,
+      tipo_accidente: document.getElementById('acc-tipo').value,
+      cant_vehiculos: document.getElementById('acc-cant-vehiculos').value,
+      vehiculos: JSON.stringify(vehiculos),
+      cant_victimas: document.getElementById('acc-cant-victimas').value,
+      victimas: JSON.stringify(victimas),
+      visibilidad: getRadio('visibilidad'),
+      pavimento: getRadio('pavimento'),
+      iluminacion: getRadio('iluminacion'),
+      material: document.getElementById('acc-material').value,
+      observaciones: document.getElementById('acc-obs').value,
+      responsable: document.getElementById('acc-responsable').value,
+      grado: document.getElementById('acc-grado').value,
+      lp: document.getElementById('acc-lp').value
+    };
+  }
+
+  // Envío via fetch con no-cors
+  var payloadStr = JSON.stringify(datos);
+  var formData = new FormData();
+  formData.append('payload', payloadStr);
+
+  fetch(SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    body: formData
+  })
+  .then(function() {
+    mostrarToast('ok');
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Guardar registro en Google Sheets';
+  })
+  .catch(function() {
+    mostrarToast('err');
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Guardar registro en Google Sheets';
+  });
+}
+
+function mostrarToast(tipo) {
+  var t = document.getElementById('toast-' + tipo);
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 4000);
+}
+function actualizarVehiculos() {
+  var cant = parseInt(document.getElementById('acc-cant-vehiculos').value) || 0;
+  var container = document.getElementById('acc-vehiculos-container');
+  container.innerHTML = '';
+  for (var i = 1; i <= cant; i++) {
+    var div = document.createElement('div');
+    div.style.cssText = 'border:1px solid var(--gris-borde);border-radius:var(--radio);padding:14px;margin-top:12px;background:var(--gris-input-bg);';
+    div.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Vehículo Nº ' + i + '</div>' +
+      '<div class="fila col2" style="margin-bottom:10px;">' +
+        '<div class="campo"><label>Patente</label><input type="text" id="acc-v' + i + '-patente" placeholder="ABC 123"></div>' +
+        '<div class="campo"><label>Marca</label><input type="text" id="acc-v' + i + '-marca"></div>' +
+      '</div>' +
+      '<div class="fila col1" style="margin-bottom:10px;">' +
+        '<div class="campo"><label>Modelo</label><input type="text" id="acc-v' + i + '-modelo"></div>' +
+      '</div>' +
+      '<div class="campo"><label>Daños</label><textarea id="acc-v' + i + '-danos" rows="2" placeholder="Describir daños visibles..."></textarea></div>';
+    container.appendChild(div);
+  }
+}
+
+function actualizarVictimas() {
+  var cant = parseInt(document.getElementById('acc-cant-victimas').value) || 0;
+  var container = document.getElementById('acc-victimas-container');
+  container.innerHTML = '';
+  for (var i = 1; i <= cant; i++) {
+    var div = document.createElement('div');
+    div.style.cssText = 'border:1px solid var(--gris-borde);border-radius:var(--radio);padding:14px;margin-top:12px;background:var(--gris-input-bg);';
+    div.innerHTML =
+      '<div style="font-size:11px;font-weight:700;color:var(--azul);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:10px;">Víctima Nº ' + i + '</div>' +
+      '<div class="campo" style="margin-bottom:10px;"><label>Apellido y nombre</label><input type="text" id="acc-vic' + i + '-nombre" placeholder="Apellido, Nombre"></div>' +
+      '<div class="campo"><label>Lesiones</label><textarea id="acc-vic' + i + '-lesiones" rows="2" placeholder="Describir lesiones..."></textarea></div>';
+    container.appendChild(div);
+  }
+}
+
+function recolectarVehiculos() {
+  var cant = parseInt(document.getElementById('acc-cant-vehiculos').value) || 0;
+  var vehiculos = [];
+  for (var i = 1; i <= cant; i++) {
+    vehiculos.push({
+      patente: (document.getElementById('acc-v' + i + '-patente') || {}).value || '',
+      marca: (document.getElementById('acc-v' + i + '-marca') || {}).value || '',
+      modelo: (document.getElementById('acc-v' + i + '-modelo') || {}).value || '',
+      danos: (document.getElementById('acc-v' + i + '-danos') || {}).value || ''
+    });
+  }
+  return vehiculos;
+}
+
+function recolectarVictimas() {
+  var cant = parseInt(document.getElementById('acc-cant-victimas').value) || 0;
+  var victimas = [];
+  for (var i = 1; i <= cant; i++) {
+    victimas.push({
+      nombre: (document.getElementById('acc-vic' + i + '-nombre') || {}).value || '',
+      lesiones: (document.getElementById('acc-vic' + i + '-lesiones') || {}).value || ''
+    });
+  }
+  return victimas;
+}
+
+function exportarPDF(tipo) {
+  var datos = {};
+  if (tipo === 'inc') {
+    datos = {
+      tipo: 'INCENDIO',
+      fecha: document.getElementById('inc-fecha').value,
+      tipo_incendio: document.getElementById('inc-tipo').value,
+      domicilio: document.getElementById('inc-domicilio').value,
+      morador: document.getElementById('inc-morador').value,
+      documento: document.getElementById('inc-documento').value,
+      calidad: document.getElementById('inc-calidad').value,
+      dimensiones: document.getElementById('inc-dimensiones').value,
+      construccion: document.getElementById('inc-construccion').value,
+      causas: document.getElementById('inc-causas').value,
+      danos: document.getElementById('inc-danos').value,
+      seguro: document.getElementById('inc-seguro').value,
+      ubicacion_fuego: document.getElementById('inc-ubicacion-fuego').value,
+      dotaciones: document.getElementById('inc-dotaciones').value,
+      material: document.getElementById('inc-material').value,
+      autoridad: document.getElementById('inc-autoridad').value,
+      movil_policial: document.getElementById('inc-movil-pol').value,
+      victimas: document.getElementById('inc-victimas').value,
+      traslado: document.getElementById('inc-traslado').value,
+      ambulancia: document.getElementById('inc-ambulancia').value,
+      medico: document.getElementById('inc-medico').value,
+      matricula: document.getElementById('inc-matricula').value,
+      observaciones: document.getElementById('inc-obs').value,
+      responsable: document.getElementById('inc-responsable').value,
+      grado: document.getElementById('inc-grado').value,
+      lp: document.getElementById('inc-lp').value
+    };
+  } else {
+    var veh = recolectarVehiculos();
+    var vic = recolectarVictimas();
+    datos = {
+      tipo: 'ACCIDENTE',
+      fecha: document.getElementById('acc-fecha').value,
+      tipo_accidente: document.getElementById('acc-tipo').value,
+      cant_vehiculos: document.getElementById('acc-cant-vehiculos').value,
+      vehiculos: veh,
+      cant_victimas: document.getElementById('acc-cant-victimas').value,
+      victimas: vic,
+      visibilidad: getRadio('visibilidad'),
+      pavimento: getRadio('pavimento'),
+      iluminacion: getRadio('iluminacion'),
+      material: document.getElementById('acc-material').value,
+      observaciones: document.getElementById('acc-obs').value,
+      responsable: document.getElementById('acc-responsable').value,
+      grado: document.getElementById('acc-grado').value,
+      lp: document.getElementById('acc-lp').value
+    };
+  }
+
+  var html = generarHTMLPlanilla(datos);
+  var ventana = window.open('', '_blank');
+  ventana.document.write(html);
+  ventana.document.close();
+  ventana.focus();
+  setTimeout(function() { ventana.print(); }, 600);
+}
+
+function campo(label, valor, ancho) {
+  ancho = ancho || '100%';
+  return '<div style="width:' + ancho + ';padding:0 6px 10px 0;display:inline-block;vertical-align:top;">' +
+    '<div style="font-size:9px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">' + label + '</div>' +
+    '<div style="border-bottom:1px solid #222;min-height:18px;font-size:12px;padding-bottom:2px;word-break:break-word;">' + (valor || '&nbsp;') + '</div>' +
+    '</div>';
+}
+
+function seccion(titulo, color) {
+  return '<div style="background:' + color + ';color:white;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;margin:12px 0 8px;">' + titulo + '</div>';
+}
+
+function generarHTMLPlanilla(d) {
+  var esInc = d.tipo === 'INCENDIO';
+  var colorPrincipal = esInc ? '#8B1A0E' : '#1A3A5C';
+
+  var cuerpo = '';
+
+  if (esInc) {
+    cuerpo += seccion('Datos del siniestro', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Fecha', d.fecha, '20%');
+    cuerpo += campo('Tipo de incendio', d.tipo_incendio, '78%');
+    cuerpo += campo('Domicilio', d.domicilio, '100%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Datos del morador / propietario', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Apellido y nombre del morador', d.morador, '55%');
+    cuerpo += campo('Documento (DNI/LC/LE) Nº', d.documento, '43%');
+    cuerpo += campo('Habita en calidad de', d.calidad, '30%');
+    cuerpo += campo('Dimensiones (m²)', d.dimensiones, '20%');
+    cuerpo += campo('Construcción de', d.construccion, '47%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Causas y daños', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Causas del siniestro', d.causas, '100%');
+    cuerpo += campo('Daños', d.danos, '60%');
+    cuerpo += campo('Seguro', d.seguro, '38%');
+    cuerpo += campo('Ubicación del fuego', d.ubicacion_fuego, '100%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Recursos y autoridades', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Cantidad de dotaciones', d.dotaciones, '25%');
+    cuerpo += campo('Material empleado', d.material, '73%');
+    cuerpo += campo('Autoridad policial a cargo', d.autoridad, '55%');
+    cuerpo += campo('Nº móvil policial', d.movil_policial, '43%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Víctimas', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Cantidad de víctimas', d.victimas, '25%');
+    cuerpo += campo('Traslado al', d.traslado, '73%');
+    cuerpo += campo('Móvil ambulancia', d.ambulancia, '30%');
+    cuerpo += campo('Médico tratante', d.medico, '42%');
+    cuerpo += campo('Matrícula', d.matricula, '25%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Observaciones', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('', d.observaciones, '100%');
+    cuerpo += '</div>';
+
+  } else {
+    cuerpo += seccion('Datos del siniestro', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Fecha', d.fecha, '20%');
+    cuerpo += campo('Tipo de accidente', d.tipo_accidente, '78%');
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Vehículos involucrados', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 8px;">';
+    if (d.vehiculos && d.vehiculos.length > 0) {
+      d.vehiculos.forEach(function(v, i) {
+        cuerpo += '<div style="border:1px solid #ddd;border-radius:4px;padding:10px;margin-bottom:8px;">';
+        cuerpo += '<div style="font-size:10px;font-weight:700;color:' + colorPrincipal + ';text-transform:uppercase;margin-bottom:6px;">Vehículo Nº ' + (i+1) + '</div>';
+        cuerpo += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+        cuerpo += campo('Patente', v.patente, '30%');
+        cuerpo += campo('Marca', v.marca, '30%');
+        cuerpo += campo('Modelo', v.modelo, '36%');
+        cuerpo += campo('Daños', v.danos, '100%');
+        cuerpo += '</div></div>';
+      });
+    } else {
+      cuerpo += '<div style="font-size:12px;color:#888;padding:6px 0;">Sin vehículos registrados</div>';
+    }
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Víctimas', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 8px;">';
+    if (d.victimas && d.victimas.length > 0) {
+      d.victimas.forEach(function(v, i) {
+        cuerpo += '<div style="border:1px solid #ddd;border-radius:4px;padding:10px;margin-bottom:8px;">';
+        cuerpo += '<div style="font-size:10px;font-weight:700;color:' + colorPrincipal + ';text-transform:uppercase;margin-bottom:6px;">Víctima Nº ' + (i+1) + '</div>';
+        cuerpo += campo('Apellido y nombre', v.nombre, '55%');
+        cuerpo += campo('Lesiones', v.lesiones, '43%');
+        cuerpo += '</div>';
+      });
+    } else {
+      cuerpo += '<div style="font-size:12px;color:#888;padding:6px 0;">Sin víctimas registradas</div>';
+    }
+    cuerpo += '</div>';
+
+    cuerpo += seccion('Condiciones del lugar', colorPrincipal);
+    cuerpo += '<table style="width:100%;border-collapse:collapse;margin-bottom:10px;font-size:11px;">';
+    cuerpo += '<tr style="background:' + colorPrincipal + ';color:white;">';
+    cuerpo += '<th style="padding:6px 10px;text-align:left;font-weight:600;">Condición</th>';
+    cuerpo += '<th style="padding:6px;text-align:center;">Buena</th>';
+    cuerpo += '<th style="padding:6px;text-align:center;">Regular</th>';
+    cuerpo += '<th style="padding:6px;text-align:center;">Mala</th></tr>';
+    ['Visibilidad','Pavimento','Iluminación'].forEach(function(cond, i) {
+      var val = [d.visibilidad, d.pavimento, d.iluminacion][i];
+      var bg = i % 2 === 0 ? '#F5F4F2' : '#FFFFFF';
+      cuerpo += '<tr style="background:' + bg + '">';
+      cuerpo += '<td style="padding:6px 10px;font-weight:500;">' + cond + '</td>';
+      ['Buena','Regular','Mala'].forEach(function(op) {
+        var match = val && val.toLowerCase().startsWith(op.toLowerCase().charAt(0));
+        cuerpo += '<td style="text-align:center;padding:6px;">' + (match ? '✓' : '') + '</td>';
+      });
+      cuerpo += '</tr>';
+    });
+    cuerpo += '</table>';
+
+    cuerpo += seccion('Material y observaciones', colorPrincipal);
+    cuerpo += '<div style="padding:0 0 4px;">';
+    cuerpo += campo('Material utilizado', d.material, '100%');
+    cuerpo += campo('Observaciones', d.observaciones, '100%');
+    cuerpo += '</div>';
+  }
+
+  // Responsable
+  cuerpo += seccion('Responsable de la toma de datos', colorPrincipal);
+  cuerpo += '<div style="padding:0 0 4px;">';
+  cuerpo += campo('Apellido y nombre', d.responsable, '55%');
+  cuerpo += campo('Grado', d.grado, '22%');
+  cuerpo += campo('Nº L.P.', d.lp, '20%');
+  cuerpo += '</div>';
+
+  // Firma
+  cuerpo += '<div style="margin-top:30px;display:flex;justify-content:flex-end;">';
+  cuerpo += '<div style="text-align:center;width:200px;">';
+  cuerpo += '<div style="border-top:1px solid #222;padding-top:5px;font-size:10px;color:#555;">FIRMA</div>';
+  cuerpo += '</div></div>';
+
+  var titulo = esInc ? 'PLANILLA DE INCENDIOS' : 'PLANILLA DE ACCIDENTES DE TRÁNSITO';
+  var subtitulo = esInc ? 'Emergencia · Servicio 01' : 'Emergencia · Servicio 02';
+
+  return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+    '<title>' + titulo + '</title>' +
+    '<style>' +
+    'body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a1a;}' +
+    '@media print{body{margin:0;}@page{margin:15mm 15mm 15mm 15mm;size:A4;}}' +
+    '</style></head><body>' +
+    '<div style="padding:20px 24px;">' +
+    // Encabezado
+    '<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid ' + colorPrincipal + ';padding-bottom:12px;margin-bottom:4px;">' +
+    '<div>' +
+    '<div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:' + colorPrincipal + ';margin-bottom:4px;">' + subtitulo + '</div>' +
+    '<div style="font-size:20px;font-weight:700;color:#1a1a1a;line-height:1.1;">' + titulo + '</div>' +
+    '<div style="font-size:11px;color:#555;margin-top:4px;">Bomberos Voluntarios de Cañuelas</div>' +
+    '</div>' +
+    '<div style="text-align:right;">' +
+    '<div style="width:52px;height:52px;background:' + colorPrincipal + ';border-radius:50%;display:flex;align-items:center;justify-content:center;">' +
+    '<svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 2C6 2 4 8 4 12c0 5 3.5 8 8 8s8-3 8-8c0-4-2-10-8-10zm0 14c-2.2 0-4-1.8-4-4 0-1.5 1-3.5 2-5 .5 1.5 1.5 2.5 2 3 .5-1 .5-2.5.5-3.5 1 1.5 1.5 3.5 1.5 5.5 0 2.2-1.8 4-4 4z"/></svg>' +
+    '</div></div>' +
+    '</div>' +
+    cuerpo +
+    '</div>' +
+    '</body></html>';
+}
+
+</script>
+</body>
+</html>
