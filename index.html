@@ -356,6 +356,21 @@ body {
     </div>
 
     <div class="bloque">
+      <div class="bloque-titulo t-rojo">Datos del vehículo (si aplica)</div>
+      <div class="bloque-body">
+        <div class="fila col3">
+          <div class="campo"><label>Patente</label><input type="text" id="inc-v-patente" placeholder="ABC 123"></div>
+          <div class="campo"><label>Marca</label><input type="text" id="inc-v-marca"></div>
+          <div class="campo"><label>Modelo</label><input type="text" id="inc-v-modelo"></div>
+        </div>
+        <div class="fila col2">
+          <div class="campo"><label>Color</label><input type="text" id="inc-v-color"></div>
+          <div class="campo"><label>Año</label><input type="text" id="inc-v-anio"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bloque">
       <div class="bloque-titulo t-rojo">Recursos y autoridades</div>
       <div class="bloque-body">
         <div class="fila col2">
@@ -813,6 +828,11 @@ function enviarFormulario(tipo) {
       medico: document.getElementById('inc-medico').value,
       matricula: document.getElementById('inc-matricula').value,
       observaciones: document.getElementById('inc-obs').value,
+      vehiculo_patente: document.getElementById('inc-v-patente').value,
+      vehiculo_marca: document.getElementById('inc-v-marca').value,
+      vehiculo_modelo: document.getElementById('inc-v-modelo').value,
+      vehiculo_color: document.getElementById('inc-v-color').value,
+      vehiculo_anio: document.getElementById('inc-v-anio').value,
       responsable: document.getElementById('inc-responsable').value,
       grado: document.getElementById('inc-grado').value,
       lp: document.getElementById('inc-lp').value
@@ -955,6 +975,11 @@ function exportarPDF(tipo) {
       medico: document.getElementById('inc-medico').value,
       matricula: document.getElementById('inc-matricula').value,
       observaciones: document.getElementById('inc-obs').value,
+      vehiculo_patente: document.getElementById('inc-v-patente').value,
+      vehiculo_marca: document.getElementById('inc-v-marca').value,
+      vehiculo_modelo: document.getElementById('inc-v-modelo').value,
+      vehiculo_color: document.getElementById('inc-v-color').value,
+      vehiculo_anio: document.getElementById('inc-v-anio').value,
       responsable: document.getElementById('inc-responsable').value,
       grado: document.getElementById('inc-grado').value,
       lp: document.getElementById('inc-lp').value
