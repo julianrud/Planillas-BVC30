@@ -1016,14 +1016,14 @@ function exportarPDF(tipo) {
 
 function campo(label, valor, ancho) {
   ancho = ancho || '100%';
-  return '<div style="width:' + ancho + ';padding:0 6px 10px 0;display:inline-block;vertical-align:top;">' +
-    '<div style="font-size:9px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:3px;">' + label + '</div>' +
-    '<div style="border-bottom:1px solid #222;min-height:18px;font-size:12px;padding-bottom:2px;word-break:break-word;">' + (valor || '&nbsp;') + '</div>' +
+  return '<div style="width:' + ancho + ';padding:0 4px 6px 0;display:inline-block;vertical-align:top;">' +
+    '<div style="font-size:7px;font-weight:600;color:#555;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;">' + label + '</div>' +
+    '<div style="border-bottom:1px solid #222;min-height:14px;font-size:10px;padding-bottom:1px;word-break:break-word;">' + (valor || '&nbsp;') + '</div>' +
     '</div>';
 }
 
 function seccion(titulo, color) {
-  return '<div style="background:' + color + ';color:white;font-size:9px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;padding:5px 10px;margin:12px 0 8px;">' + titulo + '</div>';
+  return '<div style="background:' + color + ';color:white;font-size:8px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;padding:3px 8px;margin:7px 0 5px;">' + titulo + '</div>';
 }
 
 function generarHTMLPlanilla(d) {
@@ -1155,7 +1155,7 @@ function generarHTMLPlanilla(d) {
   cuerpo += '</div>';
 
   // Firma
-  cuerpo += '<div style="margin-top:30px;display:flex;justify-content:flex-end;">';
+  cuerpo += '<div style="margin-top:12px;display:flex;justify-content:flex-end;">';
   cuerpo += '<div style="text-align:center;width:200px;">';
   cuerpo += '<div style="border-top:1px solid #222;padding-top:5px;font-size:10px;color:#555;">FIRMA</div>';
   cuerpo += '</div></div>';
@@ -1166,15 +1166,20 @@ function generarHTMLPlanilla(d) {
   return '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
     '<title>' + titulo + '</title>' +
     '<style>' +
-    'body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a1a;}' +
-    '@media print{body{margin:0;}@page{margin:15mm 15mm 15mm 15mm;size:A4;}}' +
+    'body{font-family:Arial,sans-serif;margin:0;padding:0;color:#1a1a1a;font-size:10px;}' +
+    'div{line-height:1.3;}' +
+    '@media print{' +
+    'body{margin:0;}' +
+    '@page{margin:8mm 8mm 8mm 8mm;size:A4;}' +
+    'div{page-break-inside:avoid;}' +
+    '}' +
     '</style></head><body>' +
-    '<div style="padding:20px 24px;">' +
+    '<div style="padding:10px 14px;">' +
     // Encabezado
     '<div style="display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid ' + colorPrincipal + ';padding-bottom:12px;margin-bottom:4px;">' +
     '<div>' +
     '<div style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:' + colorPrincipal + ';margin-bottom:4px;">' + subtitulo + '</div>' +
-    '<div style="font-size:20px;font-weight:700;color:#1a1a1a;line-height:1.1;">' + titulo + '</div>' +
+    '<div style="font-size:15px;font-weight:700;color:#1a1a1a;line-height:1.1;">' + titulo + '</div>' +
     '<div style="font-size:11px;color:#555;margin-top:4px;">Bomberos Voluntarios de Cañuelas</div>' +
     '</div>' +
     '<div style="text-align:right;">' +
