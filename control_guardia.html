@@ -105,6 +105,18 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--gris-bg); col
 .btn-dark { background: var(--negro); color: white; }
 .btn-rojo { background: var(--rojo); color: white; }
 .btn:hover { opacity: 0.88; }
+.btn-nav { background: var(--negro); color: white; border: none; border-radius: var(--radio); padding: 8px 14px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; }
+.btn-nav:hover { opacity: 0.85; }
+.estado-chip { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; border: 1px solid; }
+.chip-ok { background: var(--verde-light); color: var(--verde); border-color: var(--verde-borde); }
+.chip-fs { background: var(--rojo-light); color: var(--rojo); border-color: var(--rojo-borde); }
+.chip-nd { background: var(--gris-input); color: var(--gris-texto); border-color: var(--gris-borde); }
+/* Items de un solo móvil */
+.item-movil-single { display: flex; align-items: center; gap: 12px; }
+.item-movil-single select { flex: 0 0 140px; font-size: 13px; padding: 8px 10px; border: 1px solid var(--gris-borde); border-radius: var(--radio); background: var(--gris-input); font-family: 'IBM Plex Sans', sans-serif; outline: none; }
+.item-movil-single select:focus { border-color: var(--rojo); }
+.item-movil-single input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--rojo); }
+.item-sin-movil { padding: 16px; color: var(--gris-texto); font-size: 13px; text-align: center; }
 
 /* RESPONSIVE */
 @media (max-width: 600px) {
@@ -197,7 +209,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--gris-bg); col
     <div class="header-sub">Control de guardia</div>
   </div>
   <div class="header-btns">
-    <button class="hbtn primary" onclick="window.print()">🖨️ <span>Imprimir</span></button>
+    <button class="hbtn primary" onclick="exportarPDF()">🖨️ <span>Exportar PDF</span></button>
     <button class="hbtn" onclick="limpiar()">🗑️ <span>Limpiar</span></button>
   </div>
 </div>
@@ -220,15 +232,40 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--gris-bg); col
     </div>
   </div>
 
-  <!-- ESTADO DE MÓVILES -->
+  <!-- SELECTOR DE MÓVIL -->
   <div class="seccion">
-    <div class="sec-titulo">Estado de los móviles</div>
-    <div class="moviles-grid" id="moviles-grid"></div>
+    <div class="sec-titulo">Móvil activo</div>
+    <div style="padding:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <div class="campo-h" style="flex:1;min-width:160px;">
+        <label>Seleccionar móvil</label>
+        <select id="selector-movil" onchange="cambiarMovil()">
+          <option value="">— Seleccionar móvil —</option>
+        </select>
+      </div>
+      <div id="movil-estado-wrap" style="display:none;flex:1;min-width:160px;">
+        <div class="campo-h">
+          <label>Estado del móvil</label>
+          <select id="estado-movil-activo" onchange="guardarEstadoMovil()">
+            <option value="">— Estado —</option>
+            <option value="EN SERVICIO">✓ En servicio</option>
+            <option value="FUERA DE SERVICIO">✗ Fuera de servicio</option>
+          </select>
+        </div>
+      </div>
+      <div id="movil-nav" style="display:none;display:flex;gap:6px;">
+        <button onclick="movilAnterior()" class="btn-nav">← Anterior</button>
+        <button onclick="movilSiguiente()" class="btn-nav">Siguiente →</button>
+      </div>
+    </div>
+    <!-- Resumen de estados -->
+    <div style="padding:0 14px 14px;">
+      <div id="estados-resumen" style="display:flex;gap:6px;flex-wrap:wrap;"></div>
+    </div>
   </div>
 
   <!-- VEHÍCULOS -->
   <div class="seccion">
-    <div class="sec-titulo">Vehículos</div>
+    <div class="sec-titulo" id="titulo-vehiculos">Vehículos — <span id="movil-nombre-titulo">seleccioná un móvil</span></div>
     <div id="items-vehiculos"></div>
   </div>
 
@@ -304,7 +341,7 @@ body { font-family: 'IBM Plex Sans', sans-serif; background: var(--gris-bg); col
   </div>
 
   <div class="btns-bottom">
-    <button class="btn btn-dark" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn btn-dark" onclick="exportarPDF()">🖨️ Exportar / Guardar PDF</button>
     <button class="btn btn-rojo" onclick="limpiar()">🗑️ Limpiar formulario</button>
   </div>
 
@@ -386,23 +423,159 @@ document.addEventListener('DOMContentLoaded', function() {
   poblarPersonal();
 });
 
+var movilActivo = null;
+var estadosMoviles = {};
+
 function construirMoviles() {
-  var grid = document.getElementById('moviles-grid');
+  // Poblar selector
+  var sel = document.getElementById('selector-movil');
   MOVILES.forEach(function(m) {
-    var div = document.createElement('div');
-    div.className = 'movil-card';
-    div.innerHTML = '<div class="movil-num">Móvil ' + m + '</div>' +
-      '<div class="movil-estado"><select id="estado-' + m + '" onchange="colorEstado(this)">' +
-      '<option value="">— Estado —</option>' +
-      '<option value="EN SERVICIO">✓ En servicio</option>' +
-      '<option value="FUERA DE SERVICIO">✗ Fuera de servicio</option>' +
-      '</select></div>';
-    grid.appendChild(div);
+    var o = document.createElement('option');
+    o.value = m; o.textContent = 'Móvil ' + m;
+    sel.appendChild(o);
   });
+  actualizarResumen();
+}
+
+function cambiarMovil() {
+  var sel = document.getElementById('selector-movil');
+  movilActivo = sel.value ? parseInt(sel.value) : null;
+  
+  var wrap = document.getElementById('movil-estado-wrap');
+  var nav = document.getElementById('movil-nav');
+  var titulo = document.getElementById('movil-nombre-titulo');
+
+  if (movilActivo) {
+    wrap.style.display = 'flex';
+    nav.style.display = 'flex';
+    titulo.textContent = 'Móvil ' + movilActivo;
+    var estadoSel = document.getElementById('estado-movil-activo');
+    estadoSel.value = estadosMoviles[movilActivo] || '';
+    colorEstadoActivo(estadoSel);
+  } else {
+    wrap.style.display = 'none';
+    nav.style.display = 'none';
+    titulo.textContent = 'seleccioná un móvil';
+  }
+  renderizarItems();
+}
+
+function guardarEstadoMovil() {
+  if (!movilActivo) return;
+  var sel = document.getElementById('estado-movil-activo');
+  estadosMoviles[movilActivo] = sel.value;
+  colorEstadoActivo(sel);
+  actualizarResumen();
+}
+
+function colorEstadoActivo(sel) {
+  if (sel.value === 'EN SERVICIO') {
+    sel.style.background = '#E6F4EA'; sel.style.color = '#1E6B45'; sel.style.borderColor = '#5CB87A';
+  } else if (sel.value === 'FUERA DE SERVICIO') {
+    sel.style.background = '#FAF0EE'; sel.style.color = '#B03020'; sel.style.borderColor = '#D9A090';
+  } else {
+    sel.style.background = ''; sel.style.color = ''; sel.style.borderColor = '';
+  }
+}
+
+function actualizarResumen() {
+  var div = document.getElementById('estados-resumen');
+  div.innerHTML = '';
+  MOVILES.forEach(function(m) {
+    var v = estadosMoviles[m] || '';
+    var chip = document.createElement('span');
+    chip.className = 'estado-chip ' + (v === 'EN SERVICIO' ? 'chip-ok' : v === 'FUERA DE SERVICIO' ? 'chip-fs' : 'chip-nd');
+    chip.textContent = 'M' + m + (v === 'EN SERVICIO' ? ' ✓' : v === 'FUERA DE SERVICIO' ? ' ✗' : ' —');
+    chip.style.cursor = 'pointer';
+    chip.onclick = function() {
+      document.getElementById('selector-movil').value = m;
+      cambiarMovil();
+    };
+    div.appendChild(chip);
+  });
+}
+
+function movilAnterior() {
+  var idx = MOVILES.indexOf(movilActivo);
+  if (idx > 0) {
+    document.getElementById('selector-movil').value = MOVILES[idx - 1];
+    cambiarMovil();
+  }
+}
+
+function movilSiguiente() {
+  var idx = MOVILES.indexOf(movilActivo);
+  if (idx < MOVILES.length - 1) {
+    document.getElementById('selector-movil').value = MOVILES[idx + 1];
+    cambiarMovil();
+  }
+}
+
+function renderizarItems() {
+  var tipoMap = {
+    'items-vehiculos': 'sel',
+    'items-herramientas': 'chk',
+    'items-equipos': 'chk'
+  };
+  Object.keys(tipoMap).forEach(function(containerId) {
+    var tipo = tipoMap[containerId];
+    var container = document.getElementById(containerId);
+    container.querySelectorAll('.item-row').forEach(function(row) {
+      var item = row.dataset.item;
+      if (!item) return;
+      var celdaId = 'celda-' + containerId + '-' + item.replace(/[\s\/]/g,'-');
+      var celda = document.getElementById(celdaId);
+      if (!celda) return;
+
+      if (!movilActivo) {
+        celda.innerHTML = '<span style="font-size:12px;color:var(--gris-texto);">Seleccioná un móvil para cargar</span>';
+        return;
+      }
+
+      var inputId = containerId + '-' + item.replace(/[\s\/]/g,'-') + '-m' + movilActivo;
+      var existingInput = document.getElementById(inputId);
+
+      if (tipo === 'sel') {
+        var currentVal = existingInput ? existingInput.value : '';
+        celda.innerHTML = '<select onchange="guardarValor(this, \'' + inputId + '\')" style="font-size:14px;padding:9px 10px;border:1px solid var(--gris-borde);border-radius:var(--radio);background:var(--gris-input);font-family:IBM Plex Sans,sans-serif;outline:none;min-width:150px;">' +
+          '<option value="">—</option>' +
+          '<option value="OK"' + (currentVal==='OK'?' selected':'') + '>✓ OK</option>' +
+          '<option value="Reg"' + (currentVal==='Reg'?' selected':'') + '>Reg.</option>' +
+          '<option value="Mal"' + (currentVal==='Mal'?' selected':'') + '>✗ Mal</option>' +
+          '</select>';
+        var sel = celda.querySelector('select');
+        if (currentVal === 'OK') { sel.style.background='#E6F4EA'; sel.style.color='#1E6B45'; }
+        else if (currentVal === 'Reg') { sel.style.background='#FFF8E6'; sel.style.color='#5C4800'; }
+        else if (currentVal === 'Mal') { sel.style.background='#FDECEA'; sel.style.color='#B03020'; }
+        sel.onchange = function() {
+          guardarValor(this, inputId);
+        };
+      } else {
+        var checked = existingInput ? existingInput.checked : false;
+        celda.innerHTML = '<input type="checkbox"' + (checked?' checked':'') + ' style="width:26px;height:26px;accent-color:var(--rojo);cursor:pointer;" onchange="guardarCheck(this, \'' + inputId + '\')">';
+      }
+    });
+  });
+}
+
+function guardarValor(sel, inputId) {
+  var hidden = document.getElementById(inputId);
+  if (hidden) hidden.value = sel.value;
+  if (sel.value === 'OK') { sel.style.background='#E6F4EA'; sel.style.color='#1E6B45'; sel.style.borderColor='#5CB87A'; }
+  else if (sel.value === 'Reg') { sel.style.background='#FFF8E6'; sel.style.color='#5C4800'; sel.style.borderColor='#E8C840'; }
+  else if (sel.value === 'Mal') { sel.style.background='#FDECEA'; sel.style.color='#B03020'; sel.style.borderColor='#D9A090'; }
+  else { sel.style.background=''; sel.style.color=''; sel.style.borderColor=''; }
+}
+
+function guardarCheck(chk, inputId) {
+  var hidden = document.getElementById(inputId);
+  if (hidden) hidden.checked = chk.checked;
 }
 
 function construirItems(containerId, datos, tipo) {
   var container = document.getElementById(containerId);
+  container.innerHTML = '';
+
   Object.keys(datos).forEach(function(sub) {
     var items = datos[sub];
     var catDiv = document.createElement('div');
@@ -428,17 +601,30 @@ function construirItems(containerId, datos, tipo) {
       body.appendChild(subDiv);
     }
 
-    items.forEach(function(item, idx) {
+    items.forEach(function(item) {
       var row = document.createElement('div');
       row.className = 'item-row';
-      var movilesHtml = MOVILES.map(function(m) {
-        var id = containerId + '-' + item.replace(/\s/g,'-') + '-m' + m;
-        var celda = tipo === 'sel'
-          ? '<select id="' + id + '"><option value="">—</option><option value="OK">✓ OK</option><option value="Reg">Reg.</option><option value="Mal">✗ Mal</option></select>'
-          : '<input type="checkbox" id="' + id + '">';
-        return '<div class="item-movil"><span class="item-movil-num">' + m + '</span>' + celda + '</div>';
+      row.dataset.item = item;
+      row.dataset.tipo = tipo;
+      row.dataset.container = containerId;
+
+      // Crear celdas ocultas para todos los móviles (para guardar datos)
+      var hiddenInputs = MOVILES.map(function(m) {
+        var id = containerId + '-' + item.replace(/[\s\/]/g,'-') + '-m' + m;
+        if (tipo === 'sel') {
+          return '<select id="' + id + '" style="display:none"></select>';
+        } else {
+          return '<input type="checkbox" id="' + id + '" style="display:none">';
+        }
       }).join('');
-      row.innerHTML = '<div class="item-nombre">' + item + '</div><div class="item-moviles">' + movilesHtml + '</div>';
+
+      var celdaId = 'celda-' + containerId + '-' + item.replace(/[\s\/]/g,'-');
+      row.innerHTML = '<div class="item-nombre">' + item + '</div>' +
+        hiddenInputs +
+        '<div class="item-movil-single" id="' + celdaId + '">' +
+        '<span style="font-size:12px;color:var(--gris-texto);">Seleccioná un móvil para cargar</span>' +
+        '</div>';
+
       body.appendChild(row);
     });
 
@@ -478,14 +664,287 @@ function poblarPersonal() {
   });
 }
 
-function colorEstado(sel) {
-  if (sel.value === 'EN SERVICIO') {
-    sel.style.cssText = 'width:100%;font-family:IBM Plex Sans,sans-serif;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid #5CB87A;border-radius:4px;background:#E6F4EA;color:#1E6B45;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;text-align:center;';
-  } else if (sel.value === 'FUERA DE SERVICIO') {
-    sel.style.cssText = 'width:100%;font-family:IBM Plex Sans,sans-serif;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid #D9A090;border-radius:4px;background:#FAF0EE;color:#B03020;outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;text-align:center;';
-  } else {
-    sel.style.cssText = 'width:100%;font-family:IBM Plex Sans,sans-serif;font-size:12px;font-weight:600;padding:6px 4px;border:1px solid var(--gris-borde);border-radius:4px;background:var(--gris-input);outline:none;cursor:pointer;appearance:none;-webkit-appearance:none;text-align:center;';
+
+
+function exportarPDF() {
+  // Recolectar todos los datos
+  var fecha = document.getElementById('cg-fecha').value;
+  var turno = document.getElementById('cg-turno').value;
+  var sector = document.getElementById('cg-sector').value;
+
+  // Estado móviles
+  var estadoMoviles = {};
+  MOVILES.forEach(function(m) {
+    var sel = document.getElementById('estado-' + m);
+    estadoMoviles[m] = sel ? sel.value : '';
+  });
+
+  // Items vehículos, herramientas, equipos
+  function recolectarItems(datos, tipo) {
+    var resultado = [];
+    Object.keys(datos).forEach(function(sub) {
+      datos[sub].forEach(function(item) {
+        var movVals = {};
+        MOVILES.forEach(function(m) {
+          var id = (tipo === 'sel' ? 'items-vehiculos' : tipo === 'chk-h' ? 'items-herramientas' : 'items-equipos') + '-' + item.replace(/\s/g,'-') + '-m' + m;
+          var el = document.getElementById(id);
+          movVals[m] = el ? (tipo === 'sel' ? el.value : el.checked ? '✓' : '') : '';
+        });
+        resultado.push({sub: sub, item: item, moviles: movVals});
+      });
+    });
+    return resultado;
   }
+
+  var vehiculosData = recolectarItems(DATOS.vehiculos, 'sel');
+  var herramientasData = [];
+  Object.keys(DATOS.herramientas).forEach(function(sub) {
+    DATOS.herramientas[sub].forEach(function(item) {
+      var movVals = {};
+      MOVILES.forEach(function(m) {
+        var id = 'items-herramientas-' + item.replace(/\s/g,'-') + '-m' + m;
+        var el = document.getElementById(id);
+        movVals[m] = el && el.checked ? '✓' : '';
+      });
+      herramientasData.push({item: item, moviles: movVals});
+    });
+  });
+  var equiposData = [];
+  Object.keys(DATOS.equipos).forEach(function(sub) {
+    DATOS.equipos[sub].forEach(function(item) {
+      var movVals = {};
+      MOVILES.forEach(function(m) {
+        var id = 'items-equipos-' + item.replace(/\s/g,'-') + '-m' + m;
+        var el = document.getElementById(id);
+        movVals[m] = el && el.checked ? '✓' : '';
+      });
+      equiposData.push({item: item, moviles: movVals});
+    });
+  });
+
+  // Edilicio
+  var edilicioData = {};
+  EDILICIO.forEach(function(item, i) {
+    var val = '';
+    ['Bien','Regular','Mal'].forEach(function(v) {
+      var el = document.querySelector('input[name="edil' + i + '"][value="' + v + '"]');
+      if (el && el.checked) val = v;
+    });
+    edilicioData[item] = val;
+  });
+
+  // Comunicaciones
+  var com = {
+    handysTotal: document.getElementById('cg-handys-total').value,
+    handysFunc: document.getElementById('cg-handys-func').value,
+    handysObs: document.getElementById('cg-handys-obs').value,
+    batTotal: document.getElementById('cg-baterias-total').value,
+    batFunc: document.getElementById('cg-baterias-func').value,
+    batObs: document.getElementById('cg-baterias-obs').value,
+    basesTotal: document.getElementById('cg-bases-total').value,
+    basesFunc: document.getElementById('cg-bases-func').value,
+    basesObs: document.getElementById('cg-bases-obs').value
+  };
+  var obs = document.getElementById('cg-obs').value;
+  var responsable = document.getElementById('cg-responsable').value;
+  var grado = document.getElementById('cg-grado').value;
+  var lp = document.getElementById('cg-lp').value;
+
+  // Generar HTML del PDF
+  var movCols = MOVILES.map(function(m) {
+    return '<th style="width:52px;background:#1E1D1B;color:white;font-size:7px;padding:3px 2px;border:1px solid #333;text-align:center;">Móvil ' + m + '</th>';
+  }).join('');
+
+  function filaTabla(cat, sub, item, valores, tipo, catspan, subspan) {
+    var catCell = catspan ? '<td style="background:#B03020;color:white;font-size:7px;font-weight:700;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:3px 2px;width:14px;border:1px solid #999;" rowspan="' + catspan + '">' + cat + '</td>' : '';
+    var subCell = subspan !== undefined ? '<td style="background:#FAF0EE;color:#B03020;font-size:7px;font-weight:700;text-align:center;padding:2px;width:55px;border:1px solid #ddd;" rowspan="' + subspan + '">' + sub + '</td>' : '';
+    var celdas = MOVILES.map(function(m) {
+      var v = valores[m] || '';
+      var bg = v === 'OK' ? '#E6F4EA' : v === 'Reg' ? '#FFF8E6' : v === 'Mal' ? '#FDECEA' : '#fff';
+      var color = v === 'OK' ? '#1E6B45' : v === 'Reg' ? '#5C4800' : v === 'Mal' ? '#B03020' : '#999';
+      return '<td style="text-align:center;font-size:8px;font-weight:600;padding:2px;border:1px solid #ddd;background:' + bg + ';color:' + color + ';">' + v + '</td>';
+    }).join('');
+    return '<tr>' + catCell + subCell + '<td style="font-size:8px;padding:3px 5px;border:1px solid #ddd;background:#FAFAF8;">' + item + '</td>' + celdas + '</tr>';
+  }
+
+  // Construir filas vehículos
+  var filas = [];
+  var cats = {};
+  var subs = {};
+  vehiculosData.forEach(function(f) {
+    var cat = f.sub ? '' : '';
+    if (!cats[cat]) cats[cat] = 0;
+    cats[cat]++;
+  });
+
+  // Vehículos rows
+  var vRows = '';
+  var lastSub = null, subCount = 0, subRows = [];
+  vehiculosData.forEach(function(f, i) {
+    subRows.push(f);
+  });
+
+  // Calcular subspans
+  var subSpans = {};
+  subRows.forEach(function(f, i) {
+    if (f.sub !== undefined && (i === 0 || f.sub !== subRows[i-1].sub || f.sub === '')) {
+      var count = 0;
+      for (var j = i; j < subRows.length; j++) {
+        if (subRows[j].sub === f.sub) count++;
+        else break;
+      }
+      subSpans[i] = {sub: f.sub, count: count};
+    }
+  });
+
+  // Agrupar por sub para rowspan correcto
+  var subGroups = [];
+  vehiculosData.forEach(function(f) {
+    if (subGroups.length === 0 || subGroups[subGroups.length-1].sub !== f.sub) {
+      subGroups.push({sub: f.sub, items: [f]});
+    } else {
+      subGroups[subGroups.length-1].items.push(f);
+    }
+  });
+
+  var totalVeh = vehiculosData.length;
+  var firstVeh = true;
+  subGroups.forEach(function(g) {
+    g.items.forEach(function(f, idx) {
+      var catCell = firstVeh ? '<td style="background:#B03020;color:white;font-size:7px;font-weight:700;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:3px 2px;width:14px;border:1px solid #999;" rowspan="' + totalVeh + '">VEHÍCULOS</td>' : '';
+      var subCell = idx === 0 ? '<td style="background:#FAF0EE;color:#B03020;font-size:7px;font-weight:700;text-align:center;padding:2px;width:55px;border:1px solid #ddd;" rowspan="' + g.items.length + '">' + g.sub + '</td>' : '';
+      var celdas = MOVILES.map(function(m) {
+        var v = f.moviles[m] || '';
+        var bg = v === 'OK' ? '#E6F4EA' : v === 'Reg' ? '#FFF8E6' : v === 'Mal' ? '#FDECEA' : '#fff';
+        var color = v === 'OK' ? '#1E6B45' : v === 'Reg' ? '#5C4800' : v === 'Mal' ? '#B03020' : '#666';
+        return '<td style="text-align:center;font-size:8px;font-weight:600;padding:2px;border:1px solid #ddd;background:' + bg + ';color:' + color + ';">' + v + '</td>';
+      }).join('');
+      vRows += '<tr>' + catCell + subCell + '<td style="font-size:8px;padding:2px 5px;border:1px solid #ddd;background:#FAFAF8;">' + f.item + '</td>' + celdas + '</tr>';
+      firstVeh = false;
+    });
+  });
+
+  // Herramientas rows
+  var hRows = '';
+  herramientasData.forEach(function(f, i) {
+    var catCell = i === 0 ? '<td style="background:#B03020;color:white;font-size:7px;font-weight:700;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:3px 2px;width:14px;border:1px solid #999;" rowspan="' + herramientasData.length + '">HERR.</td>' : '';
+    var celdas = MOVILES.map(function(m) {
+      var v = f.moviles[m] || '';
+      return '<td style="text-align:center;font-size:10px;padding:2px;border:1px solid #ddd;">' + v + '</td>';
+    }).join('');
+    hRows += '<tr>' + catCell + '<td style="border:1px solid #ddd;background:#FAF0EE;width:55px;"></td><td style="font-size:8px;padding:2px 5px;border:1px solid #ddd;background:#FAFAF8;">' + f.item + '</td>' + celdas + '</tr>';
+  });
+
+  // Equipos rows
+  var eRows = '';
+  equiposData.forEach(function(f, i) {
+    var catCell = i === 0 ? '<td style="background:#B03020;color:white;font-size:7px;font-weight:700;text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);padding:3px 2px;width:14px;border:1px solid #999;" rowspan="' + equiposData.length + '">EQ.</td>' : '';
+    var celdas = MOVILES.map(function(m) {
+      var v = f.moviles[m] || '';
+      return '<td style="text-align:center;font-size:10px;padding:2px;border:1px solid #ddd;">' + v + '</td>';
+    }).join('');
+    eRows += '<tr>' + catCell + '<td style="border:1px solid #ddd;background:#FAF0EE;width:55px;"></td><td style="font-size:8px;padding:2px 5px;border:1px solid #ddd;background:#FAFAF8;">' + f.item + '</td>' + celdas + '</tr>';
+  });
+
+  // Estado móviles row
+  var estadoRow = '<tr style="background:#F0EEE9;">' +
+    '<td colspan="3" style="font-size:8px;font-weight:600;color:#6B6860;padding:4px 8px;border:1px solid #ddd;">Estado del móvil</td>' +
+    MOVILES.map(function(m) {
+      var v = estadoMoviles[m] || '';
+      var bg = v === 'EN SERVICIO' ? '#E6F4EA' : v === 'FUERA DE SERVICIO' ? '#FDECEA' : '#F0EEE9';
+      var color = v === 'EN SERVICIO' ? '#1E6B45' : v === 'FUERA DE SERVICIO' ? '#B03020' : '#999';
+      var label = v === 'EN SERVICIO' ? '✓ Serv.' : v === 'FUERA DE SERVICIO' ? '✗ F.S.' : '—';
+      return '<td style="text-align:center;font-size:7px;font-weight:700;padding:3px 1px;border:1px solid #ddd;background:' + bg + ';color:' + color + ';">' + label + '</td>';
+    }).join('') + '</tr>';
+
+  // Edilicio table
+  var edilRows = EDILICIO.map(function(item) {
+    var v = edilicioData[item] || '';
+    var bien = v === 'Bien' ? '●' : '○';
+    var reg = v === 'Regular' ? '●' : '○';
+    var mal = v === 'Mal' ? '●' : '○';
+    var rowBg = v === 'Mal' ? '#FDECEA' : '';
+    return '<tr style="background:' + rowBg + '">' +
+      '<td style="font-size:8px;padding:3px 6px;border:1px solid #ddd;background:#FAFAF8;">' + item + '</td>' +
+      '<td style="text-align:center;font-size:10px;padding:2px;border:1px solid #ddd;color:' + (v==='Bien'?'#1E6B45':'#ccc') + ';">' + bien + '</td>' +
+      '<td style="text-align:center;font-size:10px;padding:2px;border:1px solid #ddd;color:' + (v==='Regular'?'#5C4800':'#ccc') + ';">' + reg + '</td>' +
+      '<td style="text-align:center;font-size:10px;padding:2px;border:1px solid #ddd;color:' + (v==='Mal'?'#B03020':'#ccc') + ';">' + mal + '</td>' +
+      '</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">' +
+    '<title>Control de Guardia</title>' +
+    '<style>*{box-sizing:border-box;margin:0;padding:0;}body{font-family:Arial,sans-serif;font-size:8px;color:#1a1a1a;}' +
+    '@media print{@page{margin:4mm;size:A4 portrait;}body{margin:0;}}' +
+    '</style></head><body><div style="padding:6px 8px;">' +
+
+    // Encabezado
+    '<div style="display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #B03020;padding-bottom:6px;margin-bottom:5px;">' +
+    '<div><div style="font-size:7px;font-weight:700;color:#B03020;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:2px;">Control de guardia</div>' +
+    '<div style="font-size:14px;font-weight:700;">Planilla de control de guardia</div>' +
+    '<div style="font-size:8px;color:#6B6860;margin-top:1px;">Bomberos Voluntarios de Cañuelas</div></div>' +
+    '<div style="display:flex;gap:12px;font-size:8px;">' +
+    '<div><div style="font-weight:700;text-transform:uppercase;font-size:6px;color:#6B6860;margin-bottom:2px;">Fecha</div><div style="border-bottom:1px solid #333;padding-bottom:2px;min-width:60px;">' + (fecha || '&nbsp;') + '</div></div>' +
+    '<div><div style="font-weight:700;text-transform:uppercase;font-size:6px;color:#6B6860;margin-bottom:2px;">Turno</div><div style="border-bottom:1px solid #333;padding-bottom:2px;min-width:50px;">' + (turno || '&nbsp;') + '</div></div>' +
+    '<div><div style="font-weight:700;text-transform:uppercase;font-size:6px;color:#6B6860;margin-bottom:2px;">Sector</div><div style="border-bottom:1px solid #333;padding-bottom:2px;min-width:60px;">' + (sector || '&nbsp;') + '</div></div>' +
+    '</div></div>' +
+
+    // Tabla principal
+    '<div style="font-size:7px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B03020;background:#FAF0EE;padding:3px 6px;border:1px solid #D9A090;margin-bottom:2px;">Vehículos / Herramientas / Equipos</div>' +
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:5px;table-layout:fixed;">' +
+    '<tr><th style="width:14px;background:#1E1D1B;border:1px solid #333;"></th>' +
+    '<th style="width:55px;background:#1E1D1B;color:white;font-size:7px;padding:3px;border:1px solid #333;text-align:left;">Sub-cat.</th>' +
+    '<th style="background:#1E1D1B;color:white;font-size:7px;padding:3px 5px;border:1px solid #333;text-align:left;">Ítem</th>' +
+    movCols + '</tr>' +
+    estadoRow +
+    vRows + hRows + eRows +
+    '</table>' +
+
+    // Grid inferior
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">' +
+
+    // Edilicio
+    '<div>' +
+    '<div style="font-size:7px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B03020;background:#FAF0EE;padding:3px 6px;border:1px solid #D9A090;margin-bottom:2px;">Edilicio</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' +
+    '<tr><th style="text-align:left;font-size:7px;padding:3px 6px;background:#1E1D1B;color:white;border:1px solid #333;">Sector</th>' +
+    '<th style="width:30px;font-size:7px;padding:3px;background:#1E6B45;color:white;border:1px solid #333;text-align:center;">Bien</th>' +
+    '<th style="width:30px;font-size:7px;padding:3px;background:#5C4800;color:white;border:1px solid #333;text-align:center;">Reg.</th>' +
+    '<th style="width:30px;font-size:7px;padding:3px;background:#B03020;color:white;border:1px solid #333;text-align:center;">Mal</th></tr>' +
+    edilRows + '</table></div>' +
+
+    // Comunicaciones + obs + responsable
+    '<div style="display:flex;flex-direction:column;gap:4px;">' +
+
+    '<div><div style="font-size:7px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B03020;background:#FAF0EE;padding:3px 6px;border:1px solid #D9A090;margin-bottom:2px;">Comunicaciones</div>' +
+    '<table style="width:100%;border-collapse:collapse;">' +
+    '<tr><th style="font-size:6px;padding:2px 4px;background:#1E1D1B;color:white;border:1px solid #333;text-align:left;">Ítem</th><th style="width:35px;font-size:6px;padding:2px;background:#1E1D1B;color:white;border:1px solid #333;text-align:center;">Total</th><th style="width:35px;font-size:6px;padding:2px;background:#1E1D1B;color:white;border:1px solid #333;text-align:center;">Func.</th><th style="font-size:6px;padding:2px 4px;background:#1E1D1B;color:white;border:1px solid #333;">Observaciones</th></tr>' +
+    '<tr><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;background:#FAFAF8;">Handys</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.handysTotal||'') + '</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.handysFunc||'') + '</td><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;">' + (com.handysObs||'') + '</td></tr>' +
+    '<tr><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;background:#FAFAF8;">Baterías</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.batTotal||'') + '</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.batFunc||'') + '</td><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;">' + (com.batObs||'') + '</td></tr>' +
+    '<tr><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;background:#FAFAF8;">Bases</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.basesTotal||'') + '</td><td style="text-align:center;font-size:8px;padding:3px;border:1px solid #ddd;">' + (com.basesFunc||'') + '</td><td style="font-size:7px;padding:3px 4px;border:1px solid #ddd;">' + (com.basesObs||'') + '</td></tr>' +
+    '</table></div>' +
+
+    '<div><div style="font-size:7px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B03020;background:#FAF0EE;padding:3px 6px;border:1px solid #D9A090;margin-bottom:2px;">Observaciones generales</div>' +
+    '<div style="border:1px solid #ddd;min-height:30px;font-size:8px;padding:4px;background:#FAFAF8;">' + (obs || '&nbsp;') + '</div></div>' +
+
+    '<div><div style="font-size:7px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#B03020;background:#FAF0EE;padding:3px 6px;border:1px solid #D9A090;margin-bottom:2px;">Encargado de guardia</div>' +
+    '<div style="padding:4px;display:flex;gap:8px;">' +
+    '<div style="flex:2"><div style="font-size:6px;font-weight:700;color:#6B6860;text-transform:uppercase;margin-bottom:2px;">Apellido y nombre</div><div style="border-bottom:1px solid #333;min-height:14px;font-size:8px;">' + (responsable||'&nbsp;') + '</div></div>' +
+    '<div style="flex:1"><div style="font-size:6px;font-weight:700;color:#6B6860;text-transform:uppercase;margin-bottom:2px;">Grado</div><div style="border-bottom:1px solid #333;min-height:14px;font-size:8px;">' + (grado||'&nbsp;') + '</div></div>' +
+    '<div style="flex:1"><div style="font-size:6px;font-weight:700;color:#6B6860;text-transform:uppercase;margin-bottom:2px;">Nº L.P.</div><div style="border-bottom:1px solid #333;min-height:14px;font-size:8px;">' + (lp||'&nbsp;') + '</div></div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:flex-end;margin-top:12px;padding:0 4px;">' +
+    '<div style="text-align:center;width:150px;border-top:1px solid #333;padding-top:4px;font-size:6px;font-weight:700;color:#6B6860;text-transform:uppercase;letter-spacing:0.05em;">Firma y L.P. Encargado de Guardia</div>' +
+    '</div></div>' +
+
+    '</div></div>' + // fin grid inferior y content
+    '</body></html>';
+
+  var ventana = window.open('', '_blank');
+  ventana.document.write(html);
+  ventana.document.close();
+  ventana.focus();
+  setTimeout(function() { ventana.print(); }, 800);
 }
 
 function limpiar() {
