@@ -992,9 +992,9 @@ function exportarPDF(tipo) {
       fecha: document.getElementById('acc-fecha').value,
       tipo_accidente: document.getElementById('acc-tipo').value,
       cant_vehiculos: document.getElementById('acc-cant-vehiculos').value,
-      vehiculos: veh,
+      vehiculos: Array.isArray(veh) ? veh : JSON.parse(veh || '[]'),
       cant_victimas: document.getElementById('acc-cant-victimas').value,
-      victimas: vic,
+      victimas: Array.isArray(vic) ? vic : JSON.parse(vic || '[]'),
       visibilidad: getRadio('visibilidad'),
       pavimento: getRadio('pavimento'),
       iluminacion: getRadio('iluminacion'),
@@ -1056,6 +1056,18 @@ function generarHTMLPlanilla(d) {
     cuerpo += campo('Seguro', d.seguro, '38%');
     cuerpo += campo('Ubicación del fuego', d.ubicacion_fuego, '100%');
     cuerpo += '</div>';
+
+    // Bloque vehículo (si aplica)
+    if (d.vehiculo_patente || d.vehiculo_marca || d.vehiculo_modelo) {
+      cuerpo += seccion('Datos del vehículo', colorPrincipal);
+      cuerpo += '<div style="padding:0 0 4px;">';
+      cuerpo += campo('Patente', d.vehiculo_patente, '25%');
+      cuerpo += campo('Marca', d.vehiculo_marca, '30%');
+      cuerpo += campo('Modelo', d.vehiculo_modelo, '30%');
+      cuerpo += campo('Color', d.vehiculo_color, '20%');
+      cuerpo += campo('Año', d.vehiculo_anio, '15%');
+      cuerpo += '</div>';
+    }
 
     cuerpo += seccion('Recursos y autoridades', colorPrincipal);
     cuerpo += '<div style="padding:0 0 4px;">';
