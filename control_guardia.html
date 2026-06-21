@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Control de Guardia — Bomberos Voluntarios de Cañuelas</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --rojo: #B03020; --rojo-light: #FAF0EE; --rojo-borde: #D9A090;
+  --gris-bg: #F2F1EF; --gris-borde: #DDDBD6; --gris-texto: #6B6860;
+  --gris-input: #F7F6F3; --negro: #1E1D1B; --blanco: #FFFFFF; --radio: 5px;
+}
+body { font-family: 'IBM Plex Sans', sans-serif; background: var(--gris-bg); color: var(--negro); padding: 0 0 4rem; }
+
+.header { background: var(--negro); padding: 14px 2rem; display: flex; align-items: center; gap: 14px; }
+.header-escudo { width: 38px; height: 38px; background: var(--rojo); border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+.header-escudo svg { width: 20px; height: 20px; fill: white; }
+.header-org { color: white; font-size: 13px; font-weight: 600; }
+.header-sub { color: rgba(255,255,255,0.5); font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+
+.content { max-width: 1100px; margin: 0 auto; padding: 1.5rem 1rem; }
+
+/* ENCABEZADO FORM */
+.form-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px; }
+.form-badge { font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; padding: 3px 9px; border-radius: 3px; background: var(--rojo-light); color: var(--rojo); border: 1px solid var(--rojo-borde); display: inline-block; margin-bottom: 5px; }
+.form-titulo { font-size: 20px; font-weight: 600; }
+.head-campos { display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap; }
+.campo-h { display: flex; flex-direction: column; gap: 3px; }
+.campo-h label { font-size: 10px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--gris-texto); }
+.campo-h input, .campo-h select { font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; padding: 6px 10px; border: 1px solid var(--gris-borde); border-radius: var(--radio); background: var(--blanco); color: var(--negro); outline: none; }
+.campo-h input:focus, .campo-h select:focus { border-color: var(--rojo); }
+
+/* BLOQUES */
+.bloque { background: var(--blanco); border: 1px solid var(--gris-borde); border-radius: 8px; margin-bottom: 1rem; overflow: hidden; }
+.bloque-titulo { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 8px 14px; border-bottom: 1px solid var(--gris-borde); color: var(--rojo); background: var(--rojo-light); }
+.bloque-body { padding: 14px; }
+
+/* TABLA PRINCIPAL */
+.t { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+.t th { background: var(--negro); color: white; font-size: 10px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; padding: 7px 4px; text-align: center; border: 1px solid #333; }
+.t th.left { text-align: left; padding-left: 10px; }
+.t td { border: 1px solid var(--gris-borde); vertical-align: middle; padding: 0; }
+.t td.cat { background: var(--rojo); color: white; font-size: 9px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; text-align: center; writing-mode: vertical-rl; transform: rotate(180deg); padding: 6px 3px; width: 22px; }
+.t td.sub { background: var(--rojo-light); color: var(--rojo); font-size: 9px; font-weight: 700; text-align: center; vertical-align: middle; padding: 4px 3px; width: 90px; text-transform: uppercase; letter-spacing: 0.04em; }
+.t td.item { font-size: 11px; padding: 4px 8px; background: #FAFAF8; width: 110px; }
+.t td.celda-sel { padding: 2px 3px; text-align: center; }
+.t td.celda-chk { text-align: center; padding: 3px; }
+.t select.sel { width: 100%; font-family: 'IBM Plex Sans', sans-serif; font-size: 10px; padding: 3px 2px; border: 1px solid var(--gris-borde); border-radius: 3px; background: var(--gris-input); outline: none; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.t select.sel:focus { border-color: var(--rojo); }
+.t input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--rojo); cursor: pointer; }
+.t tr.estado-row td { background: #F0EEE9; }
+.t tr.estado-row select { font-weight: 600; font-size: 10px; }
+.t tr:hover td:not(.cat):not(.sub) { background: #F5F3F0; }
+
+/* GRID INFERIOR */
+.grid-inferior { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem; }
+
+/* TABLA EDILICIO */
+.t-edil { width: 100%; border-collapse: collapse; font-size: 12px; }
+.t-edil th { background: var(--negro); color: white; font-size: 10px; font-weight: 600; padding: 6px 8px; border: 1px solid #333; text-align: center; }
+.t-edil th.left { text-align: left; }
+.t-edil td { border: 1px solid var(--gris-borde); padding: 4px 8px; vertical-align: middle; }
+.t-edil td.item { font-size: 11px; background: #FAFAF8; }
+.t-edil td.chk { text-align: center; }
+.t-edil input[type=radio] { width: 14px; height: 14px; accent-color: var(--rojo); cursor: pointer; }
+.t-edil tr:hover td { background: #F5F3F0; }
+
+/* CAMPOS */
+.campo { display: flex; flex-direction: column; gap: 4px; }
+.campo label { font-size: 10px; font-weight: 600; color: var(--gris-texto); letter-spacing: 0.04em; text-transform: uppercase; }
+.campo input, .campo select, .campo textarea { width: 100%; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; padding: 8px 10px; border: 1px solid var(--gris-borde); border-radius: var(--radio); background: var(--gris-input); color: var(--negro); outline: none; }
+.campo input:focus, .campo select:focus, .campo textarea:focus { border-color: var(--rojo); }
+.campo textarea { resize: vertical; min-height: 55px; }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 8px; margin-bottom: 8px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+
+/* FIRMA */
+.firma-wrap { display: flex; justify-content: flex-end; margin-top: 10px; }
+.firma-linea { width: 200px; text-align: center; border-top: 1px solid var(--negro); padding-top: 5px; font-size: 10px; color: var(--gris-texto); font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+
+/* BOTONES */
+.btns { display: flex; gap: 10px; margin-top: 1.25rem; }
+.btn { flex: 1; padding: 12px; font-family: 'IBM Plex Sans', sans-serif; font-size: 14px; font-weight: 600; border: none; border-radius: var(--radio); cursor: pointer; }
+.btn-dark { background: var(--negro); color: white; }
+.btn-rojo { background: var(--rojo); color: white; }
+.btn:hover { opacity: 0.88; }
+
+/* PRINT */
+@media print {
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  @page { margin: 4mm; size: A4 portrait; }
+  body { background: white; padding: 0; font-size: 7px; }
+  .header { display: none; }
+  .btns { display: none; }
+  .content { padding: 0; max-width: 100%; }
+  .form-head { margin-bottom: 4px; }
+  .form-titulo { font-size: 12px; }
+  .form-badge { font-size: 7px; padding: 1px 5px; margin-bottom: 2px; }
+  .campo-h input, .campo-h select { font-size: 8px; padding: 2px 5px; }
+  .bloque { margin-bottom: 3px; border-radius: 0; }
+  .bloque-titulo { padding: 3px 8px; font-size: 7px; }
+  .bloque-body { padding: 5px 8px; }
+  .t th { font-size: 7px; padding: 3px 2px; }
+  .t td.cat { width: 14px; font-size: 6px; }
+  .t td.sub { width: 60px; font-size: 7px; padding: 2px; }
+  .t td.item { font-size: 8px; padding: 2px 4px; width: 70px; }
+  .t td.celda-sel { padding: 1px 2px; }
+  .t td.celda-chk { padding: 2px; }
+  .t select.sel { font-size: 7px; padding: 1px; }
+  .t input[type=checkbox] { width: 11px; height: 11px; }
+  .grid-inferior { gap: 4px; margin-top: 4px; }
+  .t-edil th { font-size: 7px; padding: 3px 4px; }
+  .t-edil td { font-size: 8px; padding: 2px 5px; }
+  .t-edil input[type=radio] { width: 10px; height: 10px; }
+  .grid3, .grid2 { gap: 4px; margin-bottom: 4px; }
+  .campo label { font-size: 6px; }
+  .campo input, .campo select, .campo textarea { font-size: 8px; padding: 2px 4px; }
+  .campo textarea { min-height: 18px; }
+  .firma-linea { font-size: 7px; width: 140px; }
+  .firma-wrap { margin-top: 4px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-escudo">
+    <svg viewBox="0 0 24 24"><path d="M12 2C6 2 4 8 4 12c0 5 3.5 8 8 8s8-3 8-8c0-4-2-10-8-10zm0 14c-2.2 0-4-1.8-4-4 0-1.5 1-3.5 2-5 .5 1.5 1.5 2.5 2 3 .5-1 .5-2.5.5-3.5 1 1.5 1.5 3.5 1.5 5.5 0 2.2-1.8 4-4 4z"/></svg>
+  </div>
+  <div>
+    <div class="header-org">Bomberos Voluntarios de Cañuelas</div>
+    <div class="header-sub">Control de guardia</div>
+  </div>
+</div>
+
+<div class="content">
+
+  <div class="form-head">
+    <div>
+      <div class="form-badge">Control de guardia</div>
+      <div class="form-titulo">Planilla de control de guardia</div>
+    </div>
+    <div class="head-campos">
+      <div class="campo-h"><label>Fecha</label><input type="date" id="cg-fecha"></div>
+      <div class="campo-h"><label>Turno</label>
+        <select id="cg-turno">
+          <option value="">— Seleccionar —</option>
+          <option>Mañana</option><option>Tarde</option><option>Noche</option>
+        </select>
+      </div>
+      <div class="campo-h"><label>Sector</label><input type="text" id="cg-sector" placeholder="Sector" style="width:120px"></div>
+    </div>
+  </div>
+
+  <!-- TABLA PRINCIPAL -->
+  <div class="bloque">
+    <div class="bloque-titulo">Vehículos</div>
+    <div style="overflow-x:auto;">
+      <table class="t" id="tabla-principal">
+        <thead>
+          <tr>
+            <th style="width:22px;"></th>
+            <th class="left" style="width:90px;">Sub-categoría</th>
+            <th class="left" style="width:110px;">Ítem</th>
+            <th style="width:80px;">Móvil 13</th>
+            <th style="width:80px;">Móvil 28</th>
+            <th style="width:80px;">Móvil 29</th>
+            <th style="width:80px;">Móvil 33</th>
+            <th style="width:80px;">Móvil 34</th>
+            <th style="width:80px;">Móvil 35</th>
+            <th style="width:80px;">Móvil 36</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-principal"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- GRID INFERIOR -->
+  <div class="grid-inferior">
+
+    <!-- EDILICIO -->
+    <div class="bloque">
+      <div class="bloque-titulo">Edilicio</div>
+      <table class="t-edil">
+        <thead>
+          <tr>
+            <th class="left">Sector</th>
+            <th style="width:55px;">Bien</th>
+            <th style="width:55px;">Regular</th>
+            <th style="width:55px;">Mal</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-edilicio"></tbody>
+      </table>
+    </div>
+
+    <!-- COMUNICACIONES + OBS + RESPONSABLE -->
+    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+
+      <div class="bloque">
+        <div class="bloque-titulo">Comunicaciones</div>
+        <div class="bloque-body">
+          <div class="grid3">
+            <div class="campo"><label>Total handys</label><input type="number" id="cg-handys-total" min="0"></div>
+            <div class="campo"><label>Funcionan</label><input type="number" id="cg-handys-func" min="0"></div>
+            <div class="campo"><label>Observaciones handys</label><input type="text" id="cg-handys-obs"></div>
+          </div>
+          <div class="grid3">
+            <div class="campo"><label>Total baterías</label><input type="number" id="cg-baterias-total" min="0"></div>
+            <div class="campo"><label>Funcionan</label><input type="number" id="cg-baterias-func" min="0"></div>
+            <div class="campo"><label>Observaciones baterías</label><input type="text" id="cg-baterias-obs"></div>
+          </div>
+          <div class="grid3">
+            <div class="campo"><label>Total bases</label><input type="number" id="cg-bases-total" min="0"></div>
+            <div class="campo"><label>Funcionan</label><input type="number" id="cg-bases-func" min="0"></div>
+            <div class="campo"><label>Observaciones bases</label><input type="text" id="cg-bases-obs"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="bloque">
+        <div class="bloque-titulo">Observaciones generales</div>
+        <div class="bloque-body">
+          <div class="campo"><textarea id="cg-obs" rows="3" placeholder="Observaciones generales del turno..."></textarea></div>
+        </div>
+      </div>
+
+      <div class="bloque">
+        <div class="bloque-titulo">Encargado de guardia</div>
+        <div class="bloque-body">
+          <div class="grid2">
+            <div class="campo">
+              <label>Apellido y nombre</label>
+              <select id="cg-responsable"><option value="">— Seleccionar —</option></select>
+            </div>
+            <div class="campo"><label>Grado</label><input type="text" id="cg-grado" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+            <div class="campo"><label>Nº L.P.</label><input type="text" id="cg-lp" readonly style="background:#F0EEE9;color:var(--gris-texto)"></div>
+          </div>
+          <div class="firma-wrap">
+            <div class="firma-linea">Firma y L.P. Encargado de Guardia</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="btns">
+    <button class="btn btn-dark" onclick="window.print()">🖨️ Imprimir / Guardar PDF</button>
+    <button class="btn btn-rojo" onclick="limpiar()">🗑️ Limpiar formulario</button>
+  </div>
+
+</div>
+
+<script>
+var MOVILES = [13, 28, 29, 33, 34, 35, 36];
+
+var PERSONAL = [
+  {n:"Coronel, Pablo",g:"OF. Auxiliar",lp:"30/0244"},
+  {n:"Gimenez, Jonatan",g:"OF. Auxiliar",lp:"30/0157"},
+  {n:"Ortiz, Hernan",g:"OF. Auxiliar",lp:"30/0092"},
+  {n:"Cocini, Maximiliano",g:"Ayudante Mayor",lp:"30/0354"},
+  {n:"Vicente, Guillermo",g:"Ayudante Mayor",lp:"30/0166"},
+  {n:"Benigni, Jonatan",g:"Ayudante Mayor",lp:"30/0202"},
+  {n:"Larrosa, Maximiliano",g:"Ayudante Mayor",lp:"30/0207"},
+  {n:"Geiser, Eduardo",g:"Ayudante Mayor",lp:"30/0152"},
+  {n:"Bonavita, Damian",g:"Ayudante Principal",lp:"30/0104"},
+  {n:"Toledo, Emiliano",g:"Ayudante Principal",lp:"30/0179"},
+  {n:"Mansilla, Mailen",g:"Ayudante Principal",lp:"30/0257"},
+  {n:"Lopez, Maximiliano",g:"Ayudante de 1°",lp:"30/0232"},
+  {n:"Cordovero, Pablo",g:"Ayudante de 1°",lp:"30/0154"},
+  {n:"Giacobino, Sebastian",g:"Ayudante de 1°",lp:"30/0136"},
+  {n:"Matrelo, Nicolas",g:"Ayudante de 1°",lp:"30/0188"},
+  {n:"Peralta, Jose Luis",g:"Ayudante de 1°",lp:"30/0156"},
+  {n:"Ludueña, Osvaldo",g:"Ayudante de 1°",lp:"30/0206"},
+  {n:"Ferrer, Juan Carlos",g:"Ayudante",lp:"30/0190"},
+  {n:"Bordon, Jose",g:"Ayudante",lp:"30/0268"},
+  {n:"Bugari, Alex",g:"Ayudante",lp:"30/0289"},
+  {n:"Antonio, Agustina",g:"Subayudante",lp:"30/0292"},
+  {n:"Maidana, Sebastian",g:"Subayudante",lp:"30/0302"},
+  {n:"Sanchez, Tamara",g:"Subayudante",lp:"30/0312"},
+  {n:"Tellechea, Milagros",g:"Subayudante",lp:"30/0275"},
+  {n:"Martinez, Silvio",g:"Subayudante",lp:"30/0109"},
+  {n:"Yuli, Luis Alberto",g:"Bombero",lp:"30/0052"},
+  {n:"García, Juan Pablo",g:"Bombero",lp:"30/0139"},
+  {n:"Amuchastegui, Daniel",g:"Bombero",lp:"30/0151"},
+  {n:"Rosas, Luis",g:"Bombero",lp:"30/0172"},
+  {n:"Rosas, Pedro",g:"Bombero",lp:"30/0175"},
+  {n:"Jaime, Mauro",g:"Bombero",lp:"30/0124"},
+  {n:"Domínguez, Cristian",g:"Bombero",lp:"30/0183"},
+  {n:"Rodríguez, Sebastián",g:"Bombero",lp:"30/0159"},
+  {n:"Tellechea, Leonardo",g:"Bombero",lp:"30/0054"},
+  {n:"Barragan, Javier",g:"Bombero",lp:"30/0143"},
+  {n:"Ferrandi, Mauro",g:"Bombero",lp:"30/0093"},
+  {n:"Velozo, Javier",g:"Bombero",lp:"30/0087"},
+  {n:"Rasquetti, Marcos",g:"Bombero",lp:"30/0195"},
+  {n:"Montovio, Mariano",g:"Bombero",lp:"30/0086"},
+  {n:"Salerno, Yamila",g:"Bombero",lp:"30/0283"},
+  {n:"Bugari, Dylan",g:"Bombero",lp:"30/0285"},
+  {n:"Silva, Jonathan",g:"Bombero",lp:"30/0252"},
+  {n:"Roldan, Nicolas",g:"Bombero",lp:"30/0187"},
+  {n:"Piñeiro, Daniel",g:"Bombero",lp:"30/0308"},
+  {n:"Brito, Franco",g:"Bombero",lp:"30/0320"},
+  {n:"Antilef, Jorge",g:"Bombero",lp:"30/0321"},
+  {n:"Cardiello, Elias",g:"Bombero",lp:"30/0322"},
+  {n:"Mujica, Sabrina",g:"Bombero",lp:"30/0323"},
+  {n:"Higa, Nestor",g:"Bombero",lp:"30/0325"},
+  {n:"Coronel, Camila",g:"Bombero",lp:"30/0326"},
+  {n:"Rivero Lodoli, Jorge",g:"Bombero",lp:"30/0332"},
+  {n:"Cordovero, Tomas",g:"Bombero",lp:"30/0243"},
+  {n:"Bordon, Nestor",g:"Bombero",lp:"30/0264"},
+  {n:"Lopez, Matias",g:"Bombero",lp:"30/0338"},
+  {n:"Monzon, Alejandra",g:"Bombero",lp:"30/0344"},
+  {n:"Guillermo, Daiana",g:"Bombero",lp:"30/0349"},
+  {n:"Perez Loayza, Fiamma",g:"Bombero",lp:"30/0350"},
+  {n:"Colchado, Lucas",g:"Bombero",lp:"30/0219"},
+  {n:"Smith, Cecilia",g:"Bombero",lp:"30/0358"},
+  {n:"Stur, Gaston",g:"Bombero",lp:"30/0360"},
+  {n:"Ovelar, Gretel Mayra",g:"Bombero",lp:"30/0361"},
+  {n:"Tojo, Fernando",g:"Bombero",lp:"30/0362"},
+  {n:"Avalos, Melania",g:"Bombero",lp:"30/0363"},
+  {n:"Rios, Camila",g:"Bombero",lp:"30/0364"},
+  {n:"Diaz, Samira",g:"Bombero",lp:"30/0367"},
+  {n:"Mujica, Alexander",g:"Bombero",lp:"30/0370"},
+  {n:"Rodriguez, Sol Morena",g:"Bombero",lp:"30/0371"},
+  {n:"Maidana, Facundo",g:"Bombero",lp:"30/0374"},
+  {n:"Quest, Estefania",g:"Bombero",lp:"30/0375"},
+  {n:"Guercio, Oscar",g:"Bombero",lp:"30/0376"},
+  {n:"Risso, Tobias",g:"Bombero",lp:"30/0377"},
+  {n:"Fernandez, Oscar",g:"Bombero",lp:"30/0379"},
+  {n:"Leyva, Veronica",g:"Bombero",lp:"30/0381"},
+  {n:"Loseco, Ezequiel",g:"Bombero",lp:"30/0383"},
+  {n:"Mancilla, Lucas",g:"Bombero",lp:"30/0384"},
+  {n:"Fernandez, Facundo",g:"Bombero",lp:"30/0324"},
+  {n:"Villalba, Mariana",g:"Bombero",lp:"30/0319"},
+  {n:"Rosas, Federico",g:"Bombero",lp:"30/0239"},
+  {n:"Hipolito, Ailen",g:"Bombero",lp:"30/0341"},
+  {n:"Valenzuela, Joel",g:"Bombero",lp:"30/0385"},
+  {n:"Cabanillas, Jonathan",g:"Bombero",lp:"30/0248"},
+  {n:"Piedra, Emanuel",g:"Bombero",lp:"30/0386"},
+  {n:"Tito, Bruno",g:"Bombero",lp:"30/0388"},
+  {n:"Suarez, Facundo",g:"Bombero",lp:"30/0305"},
+  {n:"Lopez, Facundo",g:"Bombero",lp:"30/0213"}
+];
+
+// cat, sub, item, tipo (sel=OK/Reg/Mal, chk=checkbox)
+var FILAS = [
+  // ESTADO
+  {cat:'', sub:'', item:'Estado del móvil', tipo:'estado'},
+  // VEHÍCULOS
+  {cat:'VEHÍCULOS', sub:'FLUIDOS MOTOR', item:'Aceite', tipo:'sel', catR:16, subR:4},
+  {cat:'', sub:'', item:'Agua', tipo:'sel'},
+  {cat:'', sub:'', item:'Hidráulico', tipo:'sel'},
+  {cat:'', sub:'', item:'Liq. de frenos', tipo:'sel'},
+  {cat:'', sub:'PUESTA EN MARCHA', item:'Puesta en marcha', tipo:'sel', subR:1},
+  {cat:'', sub:'LUCES', item:'Alta', tipo:'sel', subR:6},
+  {cat:'', sub:'', item:'Baja', tipo:'sel'},
+  {cat:'', sub:'', item:'Posición', tipo:'sel'},
+  {cat:'', sub:'', item:'Giro', tipo:'sel'},
+  {cat:'', sub:'', item:'Stop', tipo:'sel'},
+  {cat:'', sub:'', item:'Sirena', tipo:'sel'},
+  {cat:'', sub:'', item:'Frenos', tipo:'sel', noSub:true, noSubR:5},
+  {cat:'', sub:'', item:'Neumáticos', tipo:'sel', noSub:true},
+  {cat:'', sub:'', item:'Agua tanque', tipo:'sel', noSub:true},
+  {cat:'', sub:'', item:'Limpieza exterior', tipo:'sel', noSub:true},
+  {cat:'', sub:'', item:'Limpieza cajoneras', tipo:'sel', noSub:true},
+  // HERRAMIENTAS
+  {cat:'HERRAMIENTAS', sub:'', item:'Linternas', tipo:'chk', catR:8, noSub:true, noSubR:8},
+  {cat:'', sub:'', item:'Cinta de peligro', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Mochila forestal', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Cola de zorro', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Guantes', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Reflectores', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Alargues', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'E.R.A.', tipo:'chk', noSub:true},
+  // EQUIPOS
+  {cat:'EQUIPOS', sub:'', item:'Forzador', tipo:'chk', catR:5, noSub:true, noSubR:5},
+  {cat:'', sub:'', item:'Motobomba', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Grupo electrógeno', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Herramientas Luka', tipo:'chk', noSub:true},
+  {cat:'', sub:'', item:'Matafuego', tipo:'chk', noSub:true},
+];
+
+var EDILICIO = ['Taller automotores','Taller materiales','Patio trasero','Salón','Parrilla','Casino','Vereda','Vestuario y baños','Dormitorios y baños','Baños','Guardia'];
+
+document.addEventListener('DOMContentLoaded', function() {
+  document.getElementById('cg-fecha').valueAsDate = new Date();
+  poblarPersonal();
+  construirTabla();
+  construirEdilicio();
+});
+
+function poblarPersonal() {
+  var sel = document.getElementById('cg-responsable');
+  PERSONAL.forEach(function(p) {
+    var o = document.createElement('option');
+    o.value = p.n; o.textContent = p.n + ' (' + p.g + ')';
+    o.dataset.g = p.g; o.dataset.lp = p.lp;
+    sel.appendChild(o);
+  });
+  sel.addEventListener('change', function() {
+    var opt = sel.options[sel.selectedIndex];
+    document.getElementById('cg-grado').value = opt.dataset.g || '';
+    document.getElementById('cg-lp').value = opt.dataset.lp || '';
+  });
+}
+
+function celdaMovil(tipo, id) {
+  if (tipo === 'estado') {
+    return '<td class="celda-sel"><select class="sel" id="' + id + '" onchange="colorEstado(this)">' +
+      '<option value="">— Estado —</option>' +
+      '<option value="EN SERVICIO">✓ En servicio</option>' +
+      '<option value="FUERA DE SERVICIO">✗ Fuera de servicio</option>' +
+      '</select></td>';
+  } else if (tipo === 'sel') {
+    return '<td class="celda-sel"><select class="sel" id="' + id + '">' +
+      '<option value="">—</option><option value="OK">✓ OK</option>' +
+      '<option value="Reg">Reg.</option><option value="Mal">✗ Mal</option>' +
+      '</select></td>';
+  } else {
+    return '<td class="celda-chk"><input type="checkbox" id="' + id + '"></td>';
+  }
+}
+
+function construirTabla() {
+  var tbody = document.getElementById('tbody-principal');
+  var noSubRendered = false;
+
+  FILAS.forEach(function(f, i) {
+    var tr = document.createElement('tr');
+    if (f.tipo === 'estado') tr.className = 'estado-row';
+    var html = '';
+
+    // Col cat
+    if (f.cat !== '') {
+      html += '<td class="cat" rowspan="' + f.catR + '">' + f.cat + '</td>';
+    } else if (f.tipo === 'estado') {
+      html += '<td style="border:1px solid var(--gris-borde);background:#F0EEE9;" colspan="2"></td>';
+    }
+
+    // Col sub
+    if (f.tipo === 'estado') {
+      // ya cubierto arriba con colspan
+    } else if (f.sub !== '') {
+      html += '<td class="sub" rowspan="' + f.subR + '">' + f.sub + '</td>';
+    } else if (f.noSub && f.noSubR) {
+      html += '<td class="sub" rowspan="' + f.noSubR + '"></td>';
+    } else if (!f.noSub && f.cat === '') {
+      // continúa rowspan anterior, no agregar
+    }
+
+    // Col item
+    if (f.tipo === 'estado') {
+      html += '<td style="font-size:11px;font-weight:600;color:var(--gris-texto);padding:5px 8px;border:1px solid var(--gris-borde);background:#F0EEE9;" colspan="1">Estado del móvil</td>';
+    } else {
+      html += '<td class="item">' + f.item + '</td>';
+    }
+
+    // Celdas por móvil
+    MOVILES.forEach(function(m) {
+      html += celdaMovil(f.tipo, 'r' + i + 'm' + m);
+    });
+
+    tr.innerHTML = html;
+    tbody.appendChild(tr);
+  });
+}
+
+function construirEdilicio() {
+  var tbody = document.getElementById('tbody-edilicio');
+  EDILICIO.forEach(function(item, i) {
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td class="item">' + item + '</td>' +
+      '<td class="chk"><input type="radio" name="edil' + i + '" value="Bien"></td>' +
+      '<td class="chk"><input type="radio" name="edil' + i + '" value="Regular"></td>' +
+      '<td class="chk"><input type="radio" name="edil' + i + '" value="Mal"></td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function colorEstado(sel) {
+  if (sel.value === 'EN SERVICIO') {
+    sel.style.background = '#E6F4EA'; sel.style.color = '#1E6B45'; sel.style.borderColor = '#5CB87A';
+  } else if (sel.value === 'FUERA DE SERVICIO') {
+    sel.style.background = '#FDECEA'; sel.style.color = '#B03020'; sel.style.borderColor = '#D9A090';
+  } else {
+    sel.style.background = ''; sel.style.color = ''; sel.style.borderColor = '';
+  }
+}
+
+function limpiar() {
+  if (!confirm('¿Limpiar todos los datos?')) return;
+  document.querySelectorAll('input[type=text],input[type=number],textarea,select').forEach(function(e) { e.value = ''; });
+  document.querySelectorAll('input[type=checkbox],input[type=radio]').forEach(function(e) { e.checked = false; });
+  document.querySelectorAll('select.sel').forEach(function(e) { e.style.background='';e.style.color='';e.style.borderColor=''; });
+  document.getElementById('cg-fecha').valueAsDate = new Date();
+}
+</script>
+</body>
+</html>
