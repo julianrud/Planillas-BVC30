@@ -746,9 +746,9 @@ function poblarPersonal(selectId, gradoId, lpId) {
   sel.innerHTML = '<option value="">— Seleccionar —</option>';
   PERSONAL.forEach(function(p) {
     var o = document.createElement('option');
-    o.value = p.nombre;
-    o.textContent = p.nombre + ' (' + p.grado + ')';
-    o.dataset.grado = p.grado;
+    o.value = p.nombre || p.n;
+    o.textContent = (p.nombre || p.n) + ' (' + (p.grado || p.g) + ')';
+    o.dataset.grado = p.grado || p.g;
     o.dataset.lp = p.lp;
     sel.appendChild(o);
   });
