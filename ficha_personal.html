@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BVC - Ficha Individual de Personal</title>
+
+<!-- Firebase compat SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+
+<style>
+  :root{
+    --rojo:#c62828;
+    --rojo-osc:#8e0000;
+    --negro:#1a1a1a;
+    --gris-osc:#2a2a2a;
+    --gris:#f2f2f2;
+    --borde:#ddd;
+    --ok:#2e7d32;
+  }
+  *{box-sizing:border-box;}
+  body{
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background:var(--gris);
+    margin:0;
+    color:#222;
+  }
+  header{
+    background:linear-gradient(135deg,var(--rojo-osc),var(--rojo));
+    color:#fff;
+    padding:18px 20px;
+    text-align:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.3);
+  }
+  header h1{margin:0;font-size:1.4em;}
+  header p{margin:4px 0 0;font-size:.85em;opacity:.9;}
+
+  nav{
+    display:flex;
+    justify-content:center;
+    background:var(--negro);
+  }
+  nav button{
+    flex:1;
+    max-width:260px;
+    padding:14px 10px;
+    background:none;
+    border:none;
+    color:#ccc;
+    font-size:1em;
+    font-weight:bold;
+    cursor:pointer;
+    border-bottom:4px solid transparent;
+  }
+  nav button.active{
+    color:#fff;
+    border-bottom:4px solid var(--rojo);
+    background:rgba(255,255,255,.05);
+  }
+
+  .container{
+    max-width:960px;
+    margin:20px auto;
+    padding:0 14px 60px;
+  }
+  .card{
+    background:#fff;
+    border-radius:10px;
+    padding:18px 20px;
+    margin-bottom:18px;
+    box-shadow:0 1px 4px rgba(0,0,0,.15);
+  }
+  .card h2{
+    margin:0 0 14px;
+    font-size:1.1em;
+    color:var(--rojo-osc);
+    border-bottom:2px solid var(--rojo);
+    padding-bottom:6px;
+  }
+  .grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+  }
+  label{
+    display:block;
+    font-size:.8em;
+    font-weight:bold;
+    color:#555;
+    margin-bottom:4px;
+  }
+  input, select, textarea{
+    width:100%;
+    padding:8px;
+    border:1px solid var(--borde);
+    border-radius:6px;
+    font-size:.95em;
+    background:#fff;
+  }
+  textarea{resize:vertical;min-height:60px;}
+  .campo{margin-bottom:2px;}
+
+  table{width:100%;border-collapse:collapse;font-size:.85em;}
+  th,td{border:1px solid var(--borde);padding:6px;text-align:left;}
+  th{background:var(--gris);}
+  td input, td select{padding:5px;font-size:.9em;}
+
+  .btn{
+    display:inline-block;
+    padding:10px 18px;
+    border:none;
+    border-radius:6px;
+    background:var(--rojo);
+    color:#fff;
+    font-weight:bold;
+    cursor:pointer;
+    font-size:.95em;
+  }
+  .btn:hover{background:var(--rojo-osc);}
+  .btn.secundario{background:#555;}
+  .btn.secundario:hover{background:#333;}
+  .btn.chico{padding:6px 10px;font-size:.8em;}
+  .btn.peligro{background:#900;}
+  .btn.ok{background:var(--ok);}
+
+  .acciones-form{
+    display:flex;
+    gap:10px;
+    justify-content:flex-end;
+    margin-top:10px;
+  }
+
+  .lista-ficha{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+    border:1px solid var(--borde);
+    border-radius:8px;
+    margin-bottom:8px;
+    cursor:pointer;
+    background:#fafafa;
+  }
+  .lista-ficha:hover{background:#f0f0f0;}
+  .lista-ficha .nombre{font-weight:bold;}
+  .lista-ficha .sub{font-size:.8em;color:#666;}
+
+  .oculto{display:none !important;}
+
+  .lockbox{
+    max-width:340px;
+    margin:60px auto;
+    text-align:center;
+  }
+  .lockbox input{margin-bottom:10px;}
+
+  .detalle-modal{
+    position:fixed;inset:0;
+    background:rgba(0,0,0,.55);
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:30px 12px;
+    overflow:auto;
+    z-index:999;
+  }
+  .detalle-caja{
+    background:#fff;
+    max-width:800px;
+    width:100%;
+    border-radius:10px;
+    padding:20px;
+  }
+  .detalle-caja h3{color:var(--rojo-osc);margin-top:18px;}
+  .detalle-fila{display:flex;justify-content:space-between;border-bottom:1px dashed #eee;padding:4px 0;font-size:.9em;}
+  .detalle-fila b{color:#555;}
+  .cerrar-modal{float:right;cursor:pointer;font-size:1.3em;color:#900;}
+
+  .buscador{margin-bottom:14px;}
+  .msg{padding:10px;border-radius:6px;margin-bottom:10px;font-size:.9em;}
+  .msg.ok{background:#e8f5e9;color:var(--ok);border:1px solid var(--ok);}
+  .msg.err{background:#ffebee;color:#c62828;border:1px solid #c62828;}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🚒 Bomberos Voluntarios de Cañuelas</h1>
+  <p>Ficha Individual de Datos del Personal</p>
+</header>
+
+<nav>
+  <button id="tabFormBtn" class="active" onclick="mostrarTab('form')">📋 Formulario</button>
+  <button id="tabPanelBtn" onclick="mostrarTab('panel')">🔐 Panel de Gestión</button>
+</nav>
+
+<div class="container">
+
+  <!-- ================= FORMULARIO ================= -->
+  <div id="vistaForm">
+
+    <div id="msgForm"></div>
+
+    <div class="card">
+      <h2>Datos Personales / Laborales</h2>
+      <div class="grid">
+        <div class="campo"><label>Apellido y Nombre *</label><input id="f_apellidoNombre"></div>
+        <div class="campo"><label>DNI *</label><input id="f_dni"></div>
+        <div class="campo"><label>Fecha de nacimiento</label><input type="date" id="f_fechaNacimiento"></div>
+        <div class="campo"><label>Sexo</label>
+          <select id="f_sexo"><option value=""></option><option>Masculino</option><option>Femenino</option><option>Otro</option></select>
+        </div>
+        <div class="campo"><label>Domicilio</label><input id="f_domicilio"></div>
+        <div class="campo"><label>Localidad</label><input id="f_localidad"></div>
+        <div class="campo"><label>Teléfono</label><input id="f_telefono"></div>
+        <div class="campo"><label>Correo electrónico</label><input type="email" id="f_email"></div>
+        <div class="campo"><label>Legajo</label><input id="f_legajo"></div>
+        <div class="campo"><label>Cargo / Función</label><input id="f_cargoFuncion"></div>
+        <div class="campo"><label>Antigüedad - Desde</label><input type="date" id="f_antigDesde"></div>
+        <div class="campo"><label>Antigüedad - Hasta</label><input type="date" id="f_antigHasta"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Datos Físicos</h2>
+      <div class="grid">
+        <div class="campo"><label>Altura (cm)</label><input type="number" id="f_altura"></div>
+        <div class="campo"><label>Peso (kg)</label><input type="number" id="f_peso"></div>
+        <div class="campo"><label>Grupo sanguíneo</label>
+          <select id="f_grupoSanguineo">
+            <option value=""></option>
+            <option>A+</option><option>A-</option><option>B+</option><option>B-</option>
+            <option>AB+</option><option>AB-</option><option>O+</option><option>O-</option>
+          </select>
+        </div>
+        <div class="campo"><label>Donante</label>
+          <select id="f_donante"><option value=""></option><option>Sí</option><option>No</option></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Datos Laborales (Empresa donde trabaja)</h2>
+      <div class="grid">
+        <div class="campo"><label>Empresa</label><input id="f_empresa"></div>
+        <div class="campo"><label>Dirección</label><input id="f_empresaDireccion"></div>
+        <div class="campo"><label>Teléfono</label><input id="f_empresaTelefono"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Datos Familiares</h2>
+      <table id="tablaFamiliares">
+        <thead>
+          <tr>
+            <th>Vínculo</th><th>Nombre</th><th>F. Nacimiento</th><th>Edad</th>
+            <th>DNI</th><th>Sexo</th><th>Vive</th><th>IOMA</th><th></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoFamiliares"></tbody>
+      </table>
+      <div style="margin-top:8px;">
+        <button type="button" class="btn chico secundario" onclick="agregarFamiliar()">+ Agregar familiar</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Indumentaria – Talles y Cantidades</h2>
+      <table>
+        <thead><tr><th>Prenda</th><th>Talle</th><th>Cantidad</th></tr></thead>
+        <tbody id="cuerpoIndumentaria"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Datos Licencia de Conductor</h2>
+      <div class="grid">
+        <div class="campo"><label>Nombre</label><input id="f_licNombre"></div>
+        <div class="campo"><label>N° Registro</label><input id="f_licRegistro"></div>
+        <div class="campo"><label>Fecha de expedición</label><input type="date" id="f_licExpedicion"></div>
+        <div class="campo"><label>Fecha de vencimiento</label><input type="date" id="f_licVencimiento"></div>
+        <div class="campo"><label>Expedida por</label><input id="f_licExpedidaPor"></div>
+        <div class="campo"><label>Clase</label><input id="f_licClase"></div>
+        <div class="campo"><label>Condición móvil</label><input id="f_condMovil"></div>
+        <div class="campo"><label>Tipo de móvil</label><input id="f_tipoMovil"></div>
+      </div>
+      <div class="campo" style="margin-top:10px;">
+        <label>Observaciones</label>
+        <textarea id="f_observaciones"></textarea>
+      </div>
+    </div>
+
+    <div class="acciones-form">
+      <button type="button" class="btn secundario" onclick="limpiarFormulario()">Limpiar</button>
+      <button type="button" class="btn ok" id="btnGuardarForm" onclick="guardarFicha()">Guardar Ficha</button>
+    </div>
+
+  </div>
+
+  <!-- ================= PANEL ================= -->
+  <div id="vistaPanel" class="oculto">
+
+    <div id="lockPanel" class="lockbox card">
+      <h2 style="text-align:center;">Acceso al Panel</h2>
+      <p style="font-size:.85em;color:#666;">Ingresá la clave para ver las fichas del personal.</p>
+      <input type="password" id="claveInput" placeholder="Clave de acceso" onkeydown="if(event.key==='Enter')validarClave()">
+      <button class="btn" style="width:100%;" onclick="validarClave()">Ingresar</button>
+      <div id="msgClave" class="msg err oculto">Clave incorrecta</div>
+    </div>
+
+    <div id="panelContenido" class="oculto">
+      <div class="card buscador">
+        <label>Buscar por nombre, DNI o legajo</label>
+        <input id="buscadorPanel" oninput="renderLista()" placeholder="Escribí para filtrar...">
+      </div>
+      <div class="card">
+        <h2>Personal registrado (<span id="totalFichas">0</span>)</h2>
+        <div id="listaFichas"></div>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<div id="modalDetalle" class="oculto"></div>
+
+<script>
+/* ==================== CONFIGURACIÓN ==================== */
+// Clave de acceso al panel. Cambiala acá si querés otra.
+const PANEL_PASSWORD = "BVC2026";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyA_X-RBYpJUJWz7vFJz4-i8lX1lNXov6bM",
+  projectId: "bvc-despacho",
+  appId: "1:112751546055:web:52f292f3ce1ac1a838b8e2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const COLECCION = "personal_fichas";
+
+const TALLES = ["", "S", "M", "L", "XL", "XXL"];
+
+const GRUPOS_INDUMENTARIA = {
+  "ESTRUCTURAL": ["Camisa","Remera","Chomba","Pantalón","Cinturón","Borceguíes","Equipo de lluvia","Gorra"],
+  "GALA": ["Casco","Chaquetón","Tiradores","Botas","Guantes","Monja","Overol"],
+  "FAJINA": ["Gorra","Chaqueta","Camisa","Camisa m/corta","Corbata","Pantalón","Zapatos"]
+};
+
+let fichaEditandoId = null; // si no es null, guardarFicha() actualiza en vez de crear
+let todasLasFichas = [];    // cache local para el panel
+
+/* ==================== NAVEGACIÓN DE TABS ==================== */
+function mostrarTab(tab){
+  document.getElementById("vistaForm").classList.toggle("oculto", tab !== "form");
+  document.getElementById("vistaPanel").classList.toggle("oculto", tab !== "panel");
+  document.getElementById("tabFormBtn").classList.toggle("active", tab === "form");
+  document.getElementById("tabPanelBtn").classList.toggle("active", tab === "panel");
+}
+
+/* ==================== FAMILIARES (filas dinámicas) ==================== */
+function agregarFamiliar(datos){
+  datos = datos || {};
+  const tbody = document.getElementById("cuerpoFamiliares");
+  const fila = document.createElement("tr");
+  fila.innerHTML =
+    '<td><input class="fam_vinculo" value="' + (datos.vinculo || "") + '"></td>' +
+    '<td><input class="fam_nombre" value="' + (datos.nombre || "") + '"></td>' +
+    '<td><input type="date" class="fam_fNacimiento" value="' + (datos.fNacimiento || "") + '"></td>' +
+    '<td><input type="number" class="fam_edad" style="width:60px" value="' + (datos.edad || "") + '"></td>' +
+    '<td><input class="fam_dni" value="' + (datos.dni || "") + '"></td>' +
+    '<td><select class="fam_sexo"><option value=""></option><option' + (datos.sexo==="Masculino"?" selected":"") + '>Masculino</option><option' + (datos.sexo==="Femenino"?" selected":"") + '>Femenino</option></select></td>' +
+    '<td><select class="fam_vive"><option value=""></option><option' + (datos.vive==="Sí"?" selected":"") + '>Sí</option><option' + (datos.vive==="No"?" selected":"") + '>No</option></select></td>' +
+    '<td><select class="fam_ioma"><option value=""></option><option' + (datos.ioma==="Sí"?" selected":"") + '>Sí</option><option' + (datos.ioma==="No"?" selected":"") + '>No</option></select></td>' +
+    '<td><button type="button" class="btn chico peligro" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+  tbody.appendChild(fila);
+}
+
+function leerFamiliares(){
+  const filas = document.querySelectorAll("#cuerpoFamiliares tr");
+  const lista = [];
+  filas.forEach(fila => {
+    lista.push({
+      vinculo: fila.querySelector(".fam_vinculo").value,
+      nombre: fila.querySelector(".fam_nombre").value,
+      fNacimiento: fila.querySelector(".fam_fNacimiento").value,
+      edad: fila.querySelector(".fam_edad").value,
+      dni: fila.querySelector(".fam_dni").value,
+      sexo: fila.querySelector(".fam_sexo").value,
+      vive: fila.querySelector(".fam_vive").value,
+      ioma: fila.querySelector(".fam_ioma").value
+    });
+  });
+  return lista;
+}
+
+/* ==================== INDUMENTARIA (generada dinámicamente) ==================== */
+function construirIndumentaria(){
+  const tbody = document.getElementById("cuerpoIndumentaria");
+  tbody.innerHTML = "";
+  Object.keys(GRUPOS_INDUMENTARIA).forEach(grupo => {
+    const filaTitulo = document.createElement("tr");
+    filaTitulo.innerHTML = '<td colspan="3" style="background:#f0f0f0;font-weight:bold;">' + grupo + '</td>';
+    tbody.appendChild(filaTitulo);
+
+    GRUPOS_INDUMENTARIA[grupo].forEach(prenda => {
+      const id = "ind_" + grupo + "_" + prenda.replace(/[^a-zA-Z0-9]/g, "");
+      const fila = document.createElement("tr");
+      let opciones = "";
+      TALLES.forEach(t => { opciones += '<option value="' + t + '">' + (t || "-") + '</option>'; });
+      fila.innerHTML =
+        '<td>' + prenda + '</td>' +
+        '<td><select id="' + id + '_talle" data-grupo="' + grupo + '" data-prenda="' + prenda + '">' + opciones + '</select></td>' +
+        '<td><input type="number" min="0" id="' + id + '_cant" style="width:70px" value="0"></td>';
+      tbody.appendChild(fila);
+    });
+  });
+}
+
+function leerIndumentaria(){
+  const resultado = {};
+  Object.keys(GRUPOS_INDUMENTARIA).forEach(grupo => {
+    resultado[grupo] = {};
+    GRUPOS_INDUMENTARIA[grupo].forEach(prenda => {
+      const id = "ind_" + grupo + "_" + prenda.replace(/[^a-zA-Z0-9]/g, "");
+      const talle = document.getElementById(id + "_talle").value;
+      const cantidad = document.getElementById(id + "_cant").value;
+      resultado[grupo][prenda] = { talle: talle, cantidad: cantidad };
+    });
+  });
+  return resultado;
+}
+
+function cargarIndumentaria(data){
+  if(!data) return;
+  Object.keys(GRUPOS_INDUMENTARIA).forEach(grupo => {
+    GRUPOS_INDUMENTARIA[grupo].forEach(prenda => {
+      const id = "ind_" + grupo + "_" + prenda.replace(/[^a-zA-Z0-9]/g, "");
+      const valores = (data[grupo] && data[grupo][prenda]) || {};
+      const selTalle = document.getElementById(id + "_talle");
+      const inpCant = document.getElementById(id + "_cant");
+      if(selTalle) selTalle.value = valores.talle || "";
+      if(inpCant) inpCant.value = valores.cantidad || 0;
+    });
+  });
+}
+
+/* ==================== GUARDAR / LIMPIAR FORMULARIO ==================== */
+function recolectarFicha(){
+  return {
+    apellidoNombre: document.getElementById("f_apellidoNombre").value.trim(),
+    dni: document.getElementById("f_dni").value.trim(),
+    fechaNacimiento: document.getElementById("f_fechaNacimiento").value,
+    sexo: document.getElementById("f_sexo").value,
+    domicilio: document.getElementById("f_domicilio").value,
+    localidad: document.getElementById("f_localidad").value,
+    telefono: document.getElementById("f_telefono").value,
+    email: document.getElementById("f_email").value,
+    legajo: document.getElementById("f_legajo").value,
+    cargoFuncion: document.getElementById("f_cargoFuncion").value,
+    antigDesde: document.getElementById("f_antigDesde").value,
+    antigHasta: document.getElementById("f_antigHasta").value,
+
+    altura: document.getElementById("f_altura").value,
+    peso: document.getElementById("f_peso").value,
+    grupoSanguineo: document.getElementById("f_grupoSanguineo").value,
+    donante: document.getElementById("f_donante").value,
+
+    empresa: document.getElementById("f_empresa").value,
+    empresaDireccion: document.getElementById("f_empresaDireccion").value,
+    empresaTelefono: document.getElementById("f_empresaTelefono").value,
+
+    familiares: leerFamiliares(),
+    indumentaria: leerIndumentaria(),
+
+    licNombre: document.getElementById("f_licNombre").value,
+    licRegistro: document.getElementById("f_licRegistro").value,
+    licExpedicion: document.getElementById("f_licExpedicion").value,
+    licVencimiento: document.getElementById("f_licVencimiento").value,
+    licExpedidaPor: document.getElementById("f_licExpedidaPor").value,
+    licClase: document.getElementById("f_licClase").value,
+    condMovil: document.getElementById("f_condMovil").value,
+    tipoMovil: document.getElementById("f_tipoMovil").value,
+    observaciones: document.getElementById("f_observaciones").value
+  };
+}
+
+function mostrarMsgForm(texto, tipo){
+  const div = document.getElementById("msgForm");
+  div.innerHTML = '<div class="msg ' + tipo + '">' + texto + '</div>';
+  setTimeout(() => { div.innerHTML = ""; }, 4000);
+}
+
+async function guardarFicha(){
+  const datos = recolectarFicha();
+
+  if(!datos.apellidoNombre || !datos.dni){
+    mostrarMsgForm("Completá al menos Apellido y Nombre y DNI.", "err");
+    return;
+  }
+
+  const boton = document.getElementById("btnGuardarForm");
+  boton.disabled = true;
+  boton.textContent = "Guardando...";
+
+  try{
+    if(fichaEditandoId){
+      datos.actualizadoEn = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(COLECCION).doc(fichaEditandoId).update(datos);
+      mostrarMsgForm("Ficha actualizada correctamente.", "ok");
+    } else {
+      datos.creadoEn = firebase.firestore.FieldValue.serverTimestamp();
+      await db.collection(COLECCION).add(datos);
+      mostrarMsgForm("Ficha guardada correctamente.", "ok");
+    }
+    limpiarFormulario();
+  }catch(err){
+    console.error(err);
+    mostrarMsgForm("Error al guardar: " + err.message, "err");
+  }finally{
+    boton.disabled = false;
+    boton.textContent = "Guardar Ficha";
+  }
+}
+
+function limpiarFormulario(){
+  document.querySelectorAll("#vistaForm input, #vistaForm select, #vistaForm textarea").forEach(el => {
+    if(el.tagName === "SELECT") el.selectedIndex = 0;
+    else el.value = "";
+  });
+  document.getElementById("cuerpoFamiliares").innerHTML = "";
+  document.querySelectorAll("#cuerpoIndumentaria input[type=number]").forEach(el => el.value = 0);
+  fichaEditandoId = null;
+  document.getElementById("btnGuardarForm").textContent = "Guardar Ficha";
+}
+
+/* ==================== PANEL: CLAVE ==================== */
+function validarClave(){
+  const valor = document.getElementById("claveInput").value;
+  if(valor === PANEL_PASSWORD){
+    sessionStorage.setItem("bvc_panel_auth", "1");
+    document.getElementById("lockPanel").classList.add("oculto");
+    document.getElementById("panelContenido").classList.remove("oculto");
+    cargarFichas();
+  } else {
+    document.getElementById("msgClave").classList.remove("oculto");
+  }
+}
+
+/* ==================== PANEL: LISTAR / BUSCAR ==================== */
+function cargarFichas(){
+  db.collection(COLECCION).orderBy("apellidoNombre").onSnapshot(snapshot => {
+    todasLasFichas = [];
+    snapshot.forEach(doc => {
+      todasLasFichas.push(Object.assign({ id: doc.id }, doc.data()));
+    });
+    renderLista();
+  }, err => {
+    console.error(err);
+  });
+}
+
+function renderLista(){
+  const texto = (document.getElementById("buscadorPanel").value || "").toLowerCase();
+  const filtradas = todasLasFichas.filter(f => {
+    const objetivo = ((f.apellidoNombre || "") + " " + (f.dni || "") + " " + (f.legajo || "")).toLowerCase();
+    return objetivo.includes(texto);
+  });
+
+  document.getElementById("totalFichas").textContent = filtradas.length;
+
+  const cont = document.getElementById("listaFichas");
+  cont.innerHTML = "";
+  if(filtradas.length === 0){
+    cont.innerHTML = "<p style='color:#888;'>No hay fichas para mostrar.</p>";
+    return;
+  }
+
+  filtradas.forEach(f => {
+    const div = document.createElement("div");
+    div.className = "lista-ficha";
+    div.onclick = () => verDetalle(f.id);
+    div.innerHTML =
+      '<div>' +
+        '<div class="nombre">' + (f.apellidoNombre || "(sin nombre)") + '</div>' +
+        '<div class="sub">DNI: ' + (f.dni || "-") + ' · Legajo: ' + (f.legajo || "-") + ' · ' + (f.cargoFuncion || "-") + '</div>' +
+      '</div>' +
+      '<div>' +
+        '<button class="btn chico" onclick="event.stopPropagation(); editarFicha(\'' + f.id + '\')">Editar</button> ' +
+        '<button class="btn chico peligro" onclick="event.stopPropagation(); eliminarFicha(\'' + f.id + '\')">Eliminar</button>' +
+      '</div>';
+    cont.appendChild(div);
+  });
+}
+
+/* ==================== PANEL: DETALLE ==================== */
+function fila(etiqueta, valor){
+  return '<div class="detalle-fila"><b>' + etiqueta + '</b><span>' + (valor || "-") + '</span></div>';
+}
+
+function verDetalle(id){
+  const f = todasLasFichas.find(x => x.id === id);
+  if(!f) return;
+
+  let familiaresHtml = "";
+  (f.familiares || []).forEach(fam => {
+    familiaresHtml += '<div class="detalle-fila"><span>' + (fam.vinculo||"-") + ' — ' + (fam.nombre||"-") +
+      ' (DNI ' + (fam.dni||"-") + ', edad ' + (fam.edad||"-") + ')</span><span>' + (fam.vive||"-") + ' / IOMA: ' + (fam.ioma||"-") + '</span></div>';
+  });
+  if(!familiaresHtml) familiaresHtml = "<p style='color:#888;'>Sin datos familiares cargados.</p>";
+
+  let indumentariaHtml = "";
+  Object.keys(GRUPOS_INDUMENTARIA).forEach(grupo => {
+    indumentariaHtml += '<h4 style="margin-bottom:4px;">' + grupo + '</h4>';
+    GRUPOS_INDUMENTARIA[grupo].forEach(prenda => {
+      const v = (f.indumentaria && f.indumentaria[grupo] && f.indumentaria[grupo][prenda]) || {};
+      if(v.talle || (v.cantidad && v.cantidad != 0)){
+        indumentariaHtml += fila(prenda, "Talle " + (v.talle || "-") + " · Cant. " + (v.cantidad || 0));
+      }
+    });
+  });
+
+  const modal = document.getElementById("modalDetalle");
+  modal.className = "detalle-modal";
+  modal.innerHTML =
+    '<div class="detalle-caja">' +
+      '<span class="cerrar-modal" onclick="cerrarDetalle()">✕</span>' +
+      '<h2>' + (f.apellidoNombre || "(sin nombre)") + '</h2>' +
+
+      '<h3>Datos Personales / Laborales</h3>' +
+      fila("DNI", f.dni) + fila("Fecha de nacimiento", f.fechaNacimiento) + fila("Sexo", f.sexo) +
+      fila("Domicilio", f.domicilio) + fila("Localidad", f.localidad) + fila("Teléfono", f.telefono) +
+      fila("Correo electrónico", f.email) + fila("Legajo", f.legajo) + fila("Cargo / Función", f.cargoFuncion) +
+      fila("Antigüedad", (f.antigDesde || "-") + " a " + (f.antigHasta || "-")) +
+
+      '<h3>Datos Físicos</h3>' +
+      fila("Altura", f.altura) + fila("Peso", f.peso) + fila("Grupo sanguíneo", f.grupoSanguineo) + fila("Donante", f.donante) +
+
+      '<h3>Datos Laborales (Empresa)</h3>' +
+      fila("Empresa", f.empresa) + fila("Dirección", f.empresaDireccion) + fila("Teléfono", f.empresaTelefono) +
+
+      '<h3>Datos Familiares</h3>' + familiaresHtml +
+
+      '<h3>Indumentaria</h3>' + indumentariaHtml +
+
+      '<h3>Licencia de Conductor</h3>' +
+      fila("Nombre", f.licNombre) + fila("Registro", f.licRegistro) +
+      fila("Expedición", f.licExpedicion) + fila("Vencimiento", f.licVencimiento) +
+      fila("Expedida por", f.licExpedidaPor) + fila("Clase", f.licClase) +
+      fila("Cond. móvil", f.condMovil) + fila("Tipo móvil", f.tipoMovil) +
+      fila("Observaciones", f.observaciones) +
+
+      '<div class="acciones-form">' +
+        '<button class="btn secundario" onclick="cerrarDetalle()">Cerrar</button>' +
+        '<button class="btn" onclick="cerrarDetalle(); editarFicha(\'' + f.id + '\')">Editar</button>' +
+      '</div>' +
+    '</div>';
+}
+
+function cerrarDetalle(){
+  const modal = document.getElementById("modalDetalle");
+  modal.className = "oculto";
+  modal.innerHTML = "";
+}
+
+/* ==================== PANEL: EDITAR / ELIMINAR ==================== */
+function editarFicha(id){
+  const f = todasLasFichas.find(x => x.id === id);
+  if(!f) return;
+
+  mostrarTab("form");
+  fichaEditandoId = id;
+  document.getElementById("btnGuardarForm").textContent = "Actualizar Ficha";
+
+  document.getElementById("f_apellidoNombre").value = f.apellidoNombre || "";
+  document.getElementById("f_dni").value = f.dni || "";
+  document.getElementById("f_fechaNacimiento").value = f.fechaNacimiento || "";
+  document.getElementById("f_sexo").value = f.sexo || "";
+  document.getElementById("f_domicilio").value = f.domicilio || "";
+  document.getElementById("f_localidad").value = f.localidad || "";
+  document.getElementById("f_telefono").value = f.telefono || "";
+  document.getElementById("f_email").value = f.email || "";
+  document.getElementById("f_legajo").value = f.legajo || "";
+  document.getElementById("f_cargoFuncion").value = f.cargoFuncion || "";
+  document.getElementById("f_antigDesde").value = f.antigDesde || "";
+  document.getElementById("f_antigHasta").value = f.antigHasta || "";
+
+  document.getElementById("f_altura").value = f.altura || "";
+  document.getElementById("f_peso").value = f.peso || "";
+  document.getElementById("f_grupoSanguineo").value = f.grupoSanguineo || "";
+  document.getElementById("f_donante").value = f.donante || "";
+
+  document.getElementById("f_empresa").value = f.empresa || "";
+  document.getElementById("f_empresaDireccion").value = f.empresaDireccion || "";
+  document.getElementById("f_empresaTelefono").value = f.empresaTelefono || "";
+
+  document.getElementById("cuerpoFamiliares").innerHTML = "";
+  (f.familiares || []).forEach(fam => agregarFamiliar(fam));
+
+  cargarIndumentaria(f.indumentaria);
+
+  document.getElementById("f_licNombre").value = f.licNombre || "";
+  document.getElementById("f_licRegistro").value = f.licRegistro || "";
+  document.getElementById("f_licExpedicion").value = f.licExpedicion || "";
+  document.getElementById("f_licVencimiento").value = f.licVencimiento || "";
+  document.getElementById("f_licExpedidaPor").value = f.licExpedidaPor || "";
+  document.getElementById("f_licClase").value = f.licClase || "";
+  document.getElementById("f_condMovil").value = f.condMovil || "";
+  document.getElementById("f_tipoMovil").value = f.tipoMovil || "";
+  document.getElementById("f_observaciones").value = f.observaciones || "";
+
+  window.scrollTo(0,0);
+}
+
+async function eliminarFicha(id){
+  const clave = prompt("Ingresá la clave de seguridad para eliminar esta ficha:");
+  if(clave !== PANEL_PASSWORD){
+    if(clave !== null) alert("Clave incorrecta. No se eliminó la ficha.");
+    return;
+  }
+  if(!confirm("¿Confirmás que querés eliminar esta ficha? Esta acción no se puede deshacer.")) return;
+
+  try{
+    await db.collection(COLECCION).doc(id).delete();
+  }catch(err){
+    console.error(err);
+    alert("Error al eliminar: " + err.message);
+  }
+}
+
+/* ==================== INICIO ==================== */
+window.onload = function(){
+  construirIndumentaria();
+  agregarFamiliar();
+
+  // Si ya se validó la clave en esta pestaña, no la vuelve a pedir
+  if(sessionStorage.getItem("bvc_panel_auth") === "1"){
+    document.getElementById("lockPanel").classList.add("oculto");
+    document.getElementById("panelContenido").classList.remove("oculto");
+    cargarFichas();
+  }
+};
+</script>
+</body>
+</html>
