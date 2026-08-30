@@ -214,7 +214,33 @@
         <div class="campo"><label>Teléfono</label><input id="f_telefono"></div>
         <div class="campo"><label>Correo electrónico</label><input type="email" id="f_email"></div>
         <div class="campo"><label>Legajo</label><input id="f_legajo"></div>
-        <div class="campo"><label>Cargo / Función</label><input id="f_cargoFuncion"></div>
+        <div class="campo"><label>Jerarquía</label>
+          <select id="f_jerarquia">
+            <option value=""></option>
+            <option>OF. Auxiliar de Dotación</option>
+            <option>OF. Auxiliar</option>
+            <option>Auxiliar</option>
+            <option>Ayudante Mayor</option>
+            <option>Ayudante Principal</option>
+            <option>Ayudante de 1°</option>
+            <option>Ayudante</option>
+            <option>Subayudante</option>
+            <option>Bombero</option>
+          </select>
+        </div>
+        <div class="campo"><label>Cargo / Función</label>
+          <select id="f_cargoFuncion">
+            <option value=""></option>
+            <option>Jefe de Cuerpo</option>
+            <option>2do. Jefe de Cuerpo</option>
+            <option>Dir. Escuela Cadetes</option>
+            <option>Numerario</option>
+            <option>Auxiliar</option>
+            <option>Miembro C.D</option>
+            <option>Brigada K9</option>
+            <option>Cuartelero</option>
+          </select>
+        </div>
         <div class="campo"><label>Antigüedad - Desde</label><input type="date" id="f_antigDesde"></div>
         <div class="campo"><label>Antigüedad - Hasta</label><input type="date" id="f_antigHasta"></div>
       </div>
@@ -244,16 +270,32 @@
         <div class="campo"><label>Empresa</label><input id="f_empresa"></div>
         <div class="campo"><label>Dirección</label><input id="f_empresaDireccion"></div>
         <div class="campo"><label>Teléfono</label><input id="f_empresaTelefono"></div>
+        <div class="campo"><label>Horario</label><input id="f_horario" placeholder="Ej: 8 a 16 hs"></div>
+        <div class="campo"><label>Tipo de horario</label>
+          <select id="f_tipoHorario">
+            <option value=""></option>
+            <option>Fijo</option>
+            <option>Rotativo</option>
+            <option>Otro</option>
+          </select>
+        </div>
+      </div>
+      <div class="campo" style="margin-top:10px;">
+        <label>Observaciones</label>
+        <textarea id="f_obsPersonales"></textarea>
       </div>
     </div>
 
     <div class="card">
       <h2>Datos Familiares</h2>
+      <p style="font-size:.82em;color:#666;margin-top:-8px;margin-bottom:12px;">
+        Completar con las personas que <b>viven en la misma casa</b> (conviven en el mismo domicilio).
+      </p>
       <table id="tablaFamiliares">
         <thead>
           <tr>
             <th>Vínculo</th><th>Nombre</th><th>F. Nacimiento</th><th>Edad</th>
-            <th>DNI</th><th>Sexo</th><th>Vive</th><th>IOMA</th><th></th>
+            <th>DNI</th><th>Sexo</th><th>Vive</th><th>IOMA</th><th>Observaciones</th><th></th>
           </tr>
         </thead>
         <tbody id="cuerpoFamiliares"></tbody>
@@ -340,10 +382,35 @@ const COLECCION = "personal_fichas";
 
 const TALLES = ["", "S", "M", "L", "XL", "XXL"];
 
+// Jerarquías tomadas del padrón usado en el despachador (bomberos_canuelas.html)
+const JERARQUIAS = [
+  "OF. Auxiliar de Dotación",
+  "OF. Auxiliar",
+  "Auxiliar",
+  "Ayudante Mayor",
+  "Ayudante Principal",
+  "Ayudante de 1°",
+  "Ayudante",
+  "Subayudante",
+  "Bombero"
+];
+
+// Cargo / Función según listado de app-gib-fabypba.com
+const CARGOS_FUNCION = [
+  "Jefe de Cuerpo",
+  "2do. Jefe de Cuerpo",
+  "Dir. Escuela Cadetes",
+  "Numerario",
+  "Auxiliar",
+  "Miembro C.D",
+  "Brigada K9",
+  "Cuartelero"
+];
+
 const GRUPOS_INDUMENTARIA = {
-  "ESTRUCTURAL": ["Camisa","Remera","Chomba","Pantalón","Cinturón","Borceguíes","Equipo de lluvia","Gorra"],
-  "GALA": ["Casco","Chaquetón","Tiradores","Botas","Guantes","Monja","Overol"],
-  "FAJINA": ["Gorra","Chaqueta","Camisa","Camisa m/corta","Corbata","Pantalón","Zapatos"]
+  "ESTRUCTURAL": ["Casco","Chaquetón","Tiradores","Botas","Guantes","Monja","Overol"],
+  "GALA": ["Gorra","Chaqueta","Camisa","Camisa m/corta","Corbata","Pantalón","Zapatos"],
+  "FAJINA": ["Camisa","Remera","Chomba","Pantalón","Borceguíes","Gorra","Buzo y/o Tricota"]
 };
 
 let fichaEditandoId = null; // si no es null, guardarFicha() actualiza en vez de crear
@@ -371,6 +438,7 @@ function agregarFamiliar(datos){
     '<td><select class="fam_sexo"><option value=""></option><option' + (datos.sexo==="Masculino"?" selected":"") + '>Masculino</option><option' + (datos.sexo==="Femenino"?" selected":"") + '>Femenino</option></select></td>' +
     '<td><select class="fam_vive"><option value=""></option><option' + (datos.vive==="Sí"?" selected":"") + '>Sí</option><option' + (datos.vive==="No"?" selected":"") + '>No</option></select></td>' +
     '<td><select class="fam_ioma"><option value=""></option><option' + (datos.ioma==="Sí"?" selected":"") + '>Sí</option><option' + (datos.ioma==="No"?" selected":"") + '>No</option></select></td>' +
+    '<td><input class="fam_observaciones" style="min-width:120px" value="' + (datos.observaciones || "") + '"></td>' +
     '<td><button type="button" class="btn chico peligro" onclick="this.closest(\'tr\').remove()">✕</button></td>';
   tbody.appendChild(fila);
 }
@@ -387,7 +455,8 @@ function leerFamiliares(){
       dni: fila.querySelector(".fam_dni").value,
       sexo: fila.querySelector(".fam_sexo").value,
       vive: fila.querySelector(".fam_vive").value,
-      ioma: fila.querySelector(".fam_ioma").value
+      ioma: fila.querySelector(".fam_ioma").value,
+      observaciones: fila.querySelector(".fam_observaciones").value
     });
   });
   return lista;
@@ -456,9 +525,13 @@ function recolectarFicha(){
     telefono: document.getElementById("f_telefono").value,
     email: document.getElementById("f_email").value,
     legajo: document.getElementById("f_legajo").value,
+    jerarquia: document.getElementById("f_jerarquia").value,
     cargoFuncion: document.getElementById("f_cargoFuncion").value,
     antigDesde: document.getElementById("f_antigDesde").value,
     antigHasta: document.getElementById("f_antigHasta").value,
+    horario: document.getElementById("f_horario").value,
+    tipoHorario: document.getElementById("f_tipoHorario").value,
+    obsPersonales: document.getElementById("f_obsPersonales").value,
 
     altura: document.getElementById("f_altura").value,
     peso: document.getElementById("f_peso").value,
@@ -582,7 +655,7 @@ function renderLista(){
     div.innerHTML =
       '<div>' +
         '<div class="nombre">' + (f.apellidoNombre || "(sin nombre)") + '</div>' +
-        '<div class="sub">DNI: ' + (f.dni || "-") + ' · Legajo: ' + (f.legajo || "-") + ' · ' + (f.cargoFuncion || "-") + '</div>' +
+        '<div class="sub">DNI: ' + (f.dni || "-") + ' · Legajo: ' + (f.legajo || "-") + ' · ' + (f.jerarquia || "-") + ' · ' + (f.cargoFuncion || "-") + '</div>' +
       '</div>' +
       '<div>' +
         '<button class="btn chico" onclick="event.stopPropagation(); editarFicha(\'' + f.id + '\')">Editar</button> ' +
@@ -605,6 +678,9 @@ function verDetalle(id){
   (f.familiares || []).forEach(fam => {
     familiaresHtml += '<div class="detalle-fila"><span>' + (fam.vinculo||"-") + ' — ' + (fam.nombre||"-") +
       ' (DNI ' + (fam.dni||"-") + ', edad ' + (fam.edad||"-") + ')</span><span>' + (fam.vive||"-") + ' / IOMA: ' + (fam.ioma||"-") + '</span></div>';
+    if(fam.observaciones){
+      familiaresHtml += '<div class="detalle-fila" style="padding-left:12px;"><span style="color:#888;">Obs.: ' + fam.observaciones + '</span></div>';
+    }
   });
   if(!familiaresHtml) familiaresHtml = "<p style='color:#888;'>Sin datos familiares cargados.</p>";
 
@@ -629,7 +705,7 @@ function verDetalle(id){
       '<h3>Datos Personales / Laborales</h3>' +
       fila("DNI", f.dni) + fila("Fecha de nacimiento", f.fechaNacimiento) + fila("Sexo", f.sexo) +
       fila("Domicilio", f.domicilio) + fila("Localidad", f.localidad) + fila("Teléfono", f.telefono) +
-      fila("Correo electrónico", f.email) + fila("Legajo", f.legajo) + fila("Cargo / Función", f.cargoFuncion) +
+      fila("Correo electrónico", f.email) + fila("Legajo", f.legajo) + fila("Jerarquía", f.jerarquia) + fila("Cargo / Función", f.cargoFuncion) +
       fila("Antigüedad", (f.antigDesde || "-") + " a " + (f.antigHasta || "-")) +
 
       '<h3>Datos Físicos</h3>' +
@@ -637,6 +713,7 @@ function verDetalle(id){
 
       '<h3>Datos Laborales (Empresa)</h3>' +
       fila("Empresa", f.empresa) + fila("Dirección", f.empresaDireccion) + fila("Teléfono", f.empresaTelefono) +
+      fila("Horario", f.horario) + fila("Tipo de horario", f.tipoHorario) + fila("Observaciones", f.obsPersonales) +
 
       '<h3>Datos Familiares</h3>' + familiaresHtml +
 
@@ -680,9 +757,13 @@ function editarFicha(id){
   document.getElementById("f_telefono").value = f.telefono || "";
   document.getElementById("f_email").value = f.email || "";
   document.getElementById("f_legajo").value = f.legajo || "";
+  document.getElementById("f_jerarquia").value = f.jerarquia || "";
   document.getElementById("f_cargoFuncion").value = f.cargoFuncion || "";
   document.getElementById("f_antigDesde").value = f.antigDesde || "";
   document.getElementById("f_antigHasta").value = f.antigHasta || "";
+  document.getElementById("f_horario").value = f.horario || "";
+  document.getElementById("f_tipoHorario").value = f.tipoHorario || "";
+  document.getElementById("f_obsPersonales").value = f.obsPersonales || "";
 
   document.getElementById("f_altura").value = f.altura || "";
   document.getElementById("f_peso").value = f.peso || "";
