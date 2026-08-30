@@ -179,6 +179,38 @@
   .msg{padding:10px;border-radius:6px;margin-bottom:10px;font-size:.9em;}
   .msg.ok{background:#e8f5e9;color:var(--ok);border:1px solid var(--ok);}
   .msg.err{background:#ffebee;color:#c62828;border:1px solid #c62828;}
+
+  .stat-box{
+    flex:1;
+    min-width:110px;
+    text-align:center;
+    padding:12px 8px;
+    border-radius:8px;
+    color:#fff;
+  }
+  .stat-box .num{font-size:1.6em;font-weight:bold;display:block;}
+  .stat-box .lbl{font-size:.75em;opacity:.9;}
+  .stat-total{background:#555;}
+  .stat-ok{background:var(--ok);}
+  .stat-incompleto{background:#f9a825;}
+  .stat-falta{background:#c62828;}
+
+  .reporte-grupo{margin-bottom:14px;}
+  .reporte-grupo summary{
+    cursor:pointer;
+    font-weight:bold;
+    padding:8px;
+    border-radius:6px;
+    background:var(--gris);
+  }
+  .reporte-item{
+    display:flex;
+    justify-content:space-between;
+    padding:6px 10px;
+    border-bottom:1px solid #eee;
+    font-size:.88em;
+  }
+  .reporte-item .faltan-campos{color:#b26a00;font-size:.85em;}
 </style>
 </head>
 <body>
@@ -350,6 +382,12 @@
     </div>
 
     <div id="panelContenido" class="oculto">
+      <div class="card">
+        <h2>📊 Reporte de Cobertura de Personal (según listado de despacho)</h2>
+        <div id="resumenReporte" style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:14px;"></div>
+        <div id="detalleReporte"></div>
+      </div>
+
       <div class="card buscador">
         <label>Buscar por nombre, DNI o legajo</label>
         <input id="buscadorPanel" oninput="renderLista()" placeholder="Escribí para filtrar...">
@@ -395,7 +433,7 @@ const JERARQUIAS = [
   "Bombero"
 ];
 
-// Cargo / Función según listado de app-gib-fabypba.com
+// Cargos / Función según listado de app-gib-fabypba.com
 const CARGOS_FUNCION = [
   "Jefe de Cuerpo",
   "2do. Jefe de Cuerpo",
@@ -405,6 +443,111 @@ const CARGOS_FUNCION = [
   "Miembro C.D",
   "Brigada K9",
   "Cuartelero"
+];
+
+// Listado de personal tomado del despachador (bomberos_canuelas.html / PERSONAL)
+const ROSTER_DESPACHO = [
+  {nombre:"Coronel, Pablo", jerarquia:"OF. Auxiliar de Dotación"},
+  {nombre:"Gimenez, Jonatan", jerarquia:"OF. Auxiliar"},
+  {nombre:"Ortiz, Hernan", jerarquia:"OF. Auxiliar"},
+  {nombre:"Cocini, Maximiliano", jerarquia:"Ayudante Mayor"},
+  {nombre:"Vicente, Guillermo", jerarquia:"Ayudante Mayor"},
+  {nombre:"Benigni, Jonatan", jerarquia:"Ayudante Mayor"},
+  {nombre:"Larrosa, Maximiliano", jerarquia:"Ayudante Mayor"},
+  {nombre:"Geiser, Eduardo", jerarquia:"Ayudante Mayor"},
+  {nombre:"Bonavita, Damian", jerarquia:"Ayudante Principal"},
+  {nombre:"Toledo, Emiliano", jerarquia:"Ayudante Principal"},
+  {nombre:"Mansilla, Mailen", jerarquia:"Ayudante Principal"},
+  {nombre:"Lopez, Maximiliano", jerarquia:"Ayudante de 1°"},
+  {nombre:"Cordovero, Pablo", jerarquia:"Ayudante de 1°"},
+  {nombre:"Giacobino, Sebastian", jerarquia:"Ayudante de 1°"},
+  {nombre:"Matrelo, Nicolas", jerarquia:"Ayudante de 1°"},
+  {nombre:"Peralta, Jose Luis", jerarquia:"Ayudante de 1°"},
+  {nombre:"Ludueña, Osvaldo", jerarquia:"Ayudante de 1°"},
+  {nombre:"Ferrer, Juan Carlos", jerarquia:"Ayudante"},
+  {nombre:"Bordon, Jose", jerarquia:"Ayudante"},
+  {nombre:"Bugari, Alex", jerarquia:"Ayudante"},
+  {nombre:"Antonio, Agustina", jerarquia:"Subayudante"},
+  {nombre:"Maidana, Sebastian", jerarquia:"Subayudante"},
+  {nombre:"Sanchez, Tamara", jerarquia:"Subayudante"},
+  {nombre:"Tellechea, Milagros", jerarquia:"Subayudante"},
+  {nombre:"Martinez, Silvio", jerarquia:"Subayudante"},
+  {nombre:"Lopez, Matias", jerarquia:"Subayudante"},
+  {nombre:"Perez Loayza, Fiamma", jerarquia:"Subayudante"},
+  {nombre:"Bugari, Dylan", jerarquia:"Subayudante"},
+  {nombre:"Yuli, Luis Alberto", jerarquia:"Bombero"},
+  {nombre:"García, Juan Pablo", jerarquia:"Bombero"},
+  {nombre:"Amuchastegui, Daniel", jerarquia:"Bombero"},
+  {nombre:"Rosas, Luis", jerarquia:"Bombero"},
+  {nombre:"Rosas, Pedro", jerarquia:"Bombero"},
+  {nombre:"Jaime, Mauro", jerarquia:"Bombero"},
+  {nombre:"Domínguez, Cristian", jerarquia:"Bombero"},
+  {nombre:"Rodríguez, Sebastián", jerarquia:"Bombero"},
+  {nombre:"Tellechea, Leonardo", jerarquia:"Bombero"},
+  {nombre:"Barragan, Javier", jerarquia:"Bombero"},
+  {nombre:"Bohler, Damian", jerarquia:"Bombero"},
+  {nombre:"Ferrandi, Mauro", jerarquia:"Bombero"},
+  {nombre:"Velozo, Javier", jerarquia:"Bombero"},
+  {nombre:"Rasquetti, Marcos", jerarquia:"Bombero"},
+  {nombre:"Montovio, Mariano", jerarquia:"Bombero"},
+  {nombre:"Salerno, Yamila", jerarquia:"Bombero"},
+  {nombre:"Silva, Jonathan", jerarquia:"Bombero"},
+  {nombre:"Roldan, Nicolas", jerarquia:"Bombero"},
+  {nombre:"Piñeiro, Daniel", jerarquia:"Bombero"},
+  {nombre:"Brito, Franco", jerarquia:"Bombero"},
+  {nombre:"Antilef, Jorge", jerarquia:"Bombero"},
+  {nombre:"Cardiello, Elias", jerarquia:"Bombero"},
+  {nombre:"Mujica, Sabrina", jerarquia:"Bombero"},
+  {nombre:"Higa, Nestor", jerarquia:"Bombero"},
+  {nombre:"Coronel, Camila", jerarquia:"Bombero"},
+  {nombre:"Rivero Lodoli, Jorge", jerarquia:"Bombero"},
+  {nombre:"Cordovero, Tomas", jerarquia:"Bombero"},
+  {nombre:"Bordon, Nestor", jerarquia:"Bombero"},
+  {nombre:"Monzon, Alejandra", jerarquia:"Bombero"},
+  {nombre:"Guillermo, Daiana", jerarquia:"Bombero"},
+  {nombre:"Colchado, Lucas", jerarquia:"Bombero"},
+  {nombre:"Smith, Cecilia", jerarquia:"Bombero"},
+  {nombre:"Stur, Gaston", jerarquia:"Bombero"},
+  {nombre:"Ovelar, Gretel Mayra", jerarquia:"Bombero"},
+  {nombre:"Tojo, Fernando", jerarquia:"Bombero"},
+  {nombre:"Avalos, Melania", jerarquia:"Bombero"},
+  {nombre:"Rios, Camila", jerarquia:"Bombero"},
+  {nombre:"Diaz, Samira", jerarquia:"Bombero"},
+  {nombre:"Mujica, Alexander", jerarquia:"Bombero"},
+  {nombre:"Rodriguez, Sol Morena", jerarquia:"Bombero"},
+  {nombre:"Maidana, Facundo", jerarquia:"Bombero"},
+  {nombre:"Quest, Estefania", jerarquia:"Bombero"},
+  {nombre:"Guercio, Oscar", jerarquia:"Bombero"},
+  {nombre:"Risso, Tobias", jerarquia:"Bombero"},
+  {nombre:"Fernandez, Oscar", jerarquia:"Bombero"},
+  {nombre:"Loseco, Ezequiel", jerarquia:"Bombero"},
+  {nombre:"Mancilla, Lucas", jerarquia:"Bombero"},
+  {nombre:"Fernandez, Facundo", jerarquia:"Bombero"},
+  {nombre:"Villalba, Mariana", jerarquia:"Bombero"},
+  {nombre:"Rosas, Federico", jerarquia:"Bombero"},
+  {nombre:"Valenzuela, Joel", jerarquia:"Bombero"},
+  {nombre:"Piedra, Emanuel", jerarquia:"Bombero"},
+  {nombre:"Tito, Bruno", jerarquia:"Bombero"},
+  {nombre:"Suarez, Facundo", jerarquia:"Bombero"},
+  {nombre:"Lopez, Facundo", jerarquia:"Bombero"},
+  {nombre:"Rodríguez, Monteros Enrique", jerarquia:"Bombero"},
+  {nombre:"Rodriguez, Jorge Martin", jerarquia:"Auxiliar"},
+  {nombre:"Rud, Julian", jerarquia:"Auxiliar"}
+];
+
+// Campos que se consideran necesarios para marcar una ficha como "OK"
+const CAMPOS_REQUERIDOS = [
+  {campo:"dni", label:"DNI"},
+  {campo:"fechaNacimiento", label:"Fecha de nacimiento"},
+  {campo:"domicilio", label:"Domicilio"},
+  {campo:"localidad", label:"Localidad"},
+  {campo:"telefono", label:"Teléfono"},
+  {campo:"legajo", label:"Legajo"},
+  {campo:"jerarquia", label:"Jerarquía"},
+  {campo:"cargoFuncion", label:"Cargo/Función"},
+  {campo:"altura", label:"Altura"},
+  {campo:"peso", label:"Peso"},
+  {campo:"grupoSanguineo", label:"Grupo sanguíneo"}
 ];
 
 const GRUPOS_INDUMENTARIA = {
@@ -619,6 +762,107 @@ function validarClave(){
   }
 }
 
+/* ==================== PANEL: REPORTE DE COBERTURA DE PERSONAL ==================== */
+function normalizarTexto(s){
+  return (s || "").toString().toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function clavePersona(nombre){
+  return normalizarTexto(nombre).split(" ").filter(Boolean).sort().join(" ");
+}
+
+function buscarFichaPorNombre(nombreRoster){
+  const clave = clavePersona(nombreRoster);
+  return todasLasFichas.find(f => clavePersona(f.apellidoNombre) === clave);
+}
+
+function renderReportePersonal(){
+  const clavesRoster = ROSTER_DESPACHO.map(p => clavePersona(p.nombre));
+
+  const faltantes = [];
+  const incompletos = [];
+  const completos = [];
+
+  ROSTER_DESPACHO.forEach(persona => {
+    const ficha = buscarFichaPorNombre(persona.nombre);
+    if(!ficha){
+      faltantes.push(persona);
+    } else {
+      const camposFaltantes = CAMPOS_REQUERIDOS
+        .filter(c => !ficha[c.campo] || String(ficha[c.campo]).trim() === "")
+        .map(c => c.label);
+      if(camposFaltantes.length > 0){
+        incompletos.push({ persona: persona, ficha: ficha, faltan: camposFaltantes });
+      } else {
+        completos.push({ persona: persona, ficha: ficha });
+      }
+    }
+  });
+
+  // Fichas cargadas que no coinciden con nadie del listado de despacho (posible error de tipeo)
+  const noIdentificadas = todasLasFichas.filter(f => !clavesRoster.includes(clavePersona(f.apellidoNombre)));
+
+  // Resumen numérico
+  document.getElementById("resumenReporte").innerHTML =
+    '<div class="stat-box stat-total"><span class="num">' + ROSTER_DESPACHO.length + '</span><span class="lbl">Total en despacho</span></div>' +
+    '<div class="stat-box stat-ok"><span class="num">' + completos.length + '</span><span class="lbl">Fichas OK</span></div>' +
+    '<div class="stat-box stat-incompleto"><span class="num">' + incompletos.length + '</span><span class="lbl">Incompletas</span></div>' +
+    '<div class="stat-box stat-falta"><span class="num">' + faltantes.length + '</span><span class="lbl">Faltan cargar</span></div>';
+
+  // Detalle expandible por grupo
+  let html = "";
+
+  html += '<details class="reporte-grupo" open><summary>❌ Faltan cargar (' + faltantes.length + ')</summary>';
+  if(faltantes.length === 0){
+    html += '<p style="color:#888;padding:8px;">No hay personal pendiente de cargar.</p>';
+  } else {
+    faltantes.forEach(p => {
+      html += '<div class="reporte-item"><span>' + p.nombre + '</span><span style="color:#888;">' + p.jerarquia + '</span></div>';
+    });
+  }
+  html += '</details>';
+
+  html += '<details class="reporte-grupo"><summary>⚠️ Incompletas (' + incompletos.length + ')</summary>';
+  if(incompletos.length === 0){
+    html += '<p style="color:#888;padding:8px;">No hay fichas incompletas.</p>';
+  } else {
+    incompletos.forEach(item => {
+      html += '<div class="reporte-item" style="flex-direction:column;align-items:flex-start;cursor:pointer;" onclick="verDetalle(\'' + item.ficha.id + '\')">' +
+        '<span><b>' + item.persona.nombre + '</b> <span style="color:#888;">(' + item.persona.jerarquia + ')</span></span>' +
+        '<span class="faltan-campos">Falta: ' + item.faltan.join(", ") + '</span>' +
+        '</div>';
+    });
+  }
+  html += '</details>';
+
+  html += '<details class="reporte-grupo"><summary>✅ Completas (' + completos.length + ')</summary>';
+  if(completos.length === 0){
+    html += '<p style="color:#888;padding:8px;">Todavía no hay fichas completas.</p>';
+  } else {
+    completos.forEach(item => {
+      html += '<div class="reporte-item" style="cursor:pointer;" onclick="verDetalle(\'' + item.ficha.id + '\')">' +
+        '<span>' + item.persona.nombre + '</span><span style="color:#888;">' + item.persona.jerarquia + '</span></div>';
+    });
+  }
+  html += '</details>';
+
+  if(noIdentificadas.length > 0){
+    html += '<details class="reporte-grupo"><summary>🔎 Cargadas pero no identificadas en el listado de despacho (' + noIdentificadas.length + ')</summary>';
+    html += '<p style="color:#888;padding:8px 8px 0;">Revisar que el nombre esté escrito igual que en el despachador (Apellido, Nombre).</p>';
+    noIdentificadas.forEach(f => {
+      html += '<div class="reporte-item" style="cursor:pointer;" onclick="verDetalle(\'' + f.id + '\')">' +
+        '<span>' + (f.apellidoNombre || "(sin nombre)") + '</span><span style="color:#888;">DNI: ' + (f.dni || "-") + '</span></div>';
+    });
+    html += '</details>';
+  }
+
+  document.getElementById("detalleReporte").innerHTML = html;
+}
+
 /* ==================== PANEL: LISTAR / BUSCAR ==================== */
 function cargarFichas(){
   db.collection(COLECCION).orderBy("apellidoNombre").onSnapshot(snapshot => {
@@ -627,6 +871,7 @@ function cargarFichas(){
       todasLasFichas.push(Object.assign({ id: doc.id }, doc.data()));
     });
     renderLista();
+    renderReportePersonal();
   }, err => {
     console.error(err);
   });
