@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cuartel Bomberos Cañuelas — Carga de Guardias</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+  :root {
+    --rojo: #d32f2f;
+    --rojo-oscuro: #8b0000;
+    --rojo-vivo: #ff1a1a;
+    --amarillo: #f5c400;
+    --negro: #0a0a0a;
+    --gris-oscuro: #141414;
+    --gris-medio: #1e1e1e;
+    --gris-borde: #2e2e2e;
+    --gris-texto: #888;
+    --blanco: #f5f5f5;
+    --fuente-titulo: 'Bebas Neue', sans-serif;
+    --fuente-mono: 'IBM Plex Mono', monospace;
+    --fuente-cuerpo: 'IBM Plex Sans', sans-serif;
+
+    --sub: var(--rojo);
+    --asp: var(--amarillo);
+    --fem: #4fb3bf;
+    --dot: #7c8a99;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--negro); color: var(--blanco); font-family: var(--fuente-cuerpo); min-height: 100vh; overflow-x: hidden; }
+
+  header {
+    background: linear-gradient(135deg, var(--rojo-oscuro) 0%, var(--rojo) 60%, #ff4444 100%);
+    padding: 18px 24px 14px;
+    display: flex; align-items: center; gap: 16px;
+    position: relative; overflow: hidden;
+  }
+  header::after {
+    content: ''; position: absolute; right: -30px; top: -30px;
+    width: 180px; height: 180px; border: 3px solid rgba(255,255,255,0.08); border-radius: 50%;
+  }
+  .header-icon { font-size: 40px; line-height: 1; }
+  .header-texto h1 { font-family: var(--fuente-titulo); font-size: 28px; letter-spacing: 2px; color: #fff; line-height: 1; }
+  .header-texto p { font-family: var(--fuente-mono); font-size: 11px; color: rgba(255,255,255,0.7); letter-spacing: 1px; margin-top: 3px; }
+
+  .container { padding: 20px 16px 60px; max-width: 900px; margin: 0 auto; }
+
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 18px; }
+  select.mes-sel, select.year-sel {
+    background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco);
+    font-family: var(--fuente-mono); font-size: 12px; padding: 9px 10px; border-radius: 3px;
+  }
+  .btn-tool {
+    background: transparent; border: 1px solid var(--gris-borde); color: var(--gris-texto);
+    font-family: var(--fuente-mono); font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    padding: 9px 14px; border-radius: 3px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-tool:hover { border-color: var(--amarillo); color: var(--amarillo); }
+  .btn-tool.danger:hover { border-color: var(--rojo); color: var(--rojo); }
+
+  .estado-conexion {
+    font-family: var(--fuente-mono); font-size: 10.5px; letter-spacing: 0.5px;
+    color: var(--gris-texto); display: flex; align-items: center; gap: 5px; margin-left: auto;
+  }
+  .estado-conexion .punto { width: 7px; height: 7px; border-radius: 50%; background: var(--gris-texto); }
+  .estado-conexion.ok .punto { background: var(--amarillo); }
+  .estado-conexion.error .punto { background: var(--rojo); }
+
+  .seccion { background: var(--gris-medio); border: 1px solid var(--gris-borde); border-radius: 4px; margin-bottom: 16px; overflow: hidden; }
+  .seccion-header {
+    background: var(--gris-oscuro); border-bottom: 2px solid var(--rojo); padding: 10px 16px;
+    font-family: var(--fuente-titulo); font-size: 16px; letter-spacing: 2px; color: var(--amarillo);
+    display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  }
+  .seccion-body { padding: 16px; }
+
+  .aviso {
+    background: var(--negro); border: 1px solid var(--gris-borde); border-left: 4px solid var(--amarillo);
+    border-radius: 3px; padding: 10px 14px; font-family: var(--fuente-mono); font-size: 12px;
+    color: var(--gris-texto); letter-spacing: 0.5px; margin-bottom: 18px;
+  }
+
+  .leyenda { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 16px; font-family: var(--fuente-mono); font-size: 11px; color: var(--gris-texto); letter-spacing: 0.5px; }
+  .leyenda .chip { display: inline-flex; align-items: center; gap: 6px; }
+  .leyenda .dot { width: 9px; height: 9px; border-radius: 2px; display: inline-block; }
+
+  .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; }
+  .cal-head { text-align: center; font-family: var(--fuente-mono); font-size: 10px; color: var(--gris-texto); text-transform: uppercase; letter-spacing: 1px; padding-bottom: 4px; }
+  .day {
+    background: var(--negro); border: 1px solid var(--gris-borde); border-radius: 4px;
+    min-height: 96px; padding: 8px; cursor: pointer; display: flex; flex-direction: column; gap: 6px;
+    transition: border-color 0.2s;
+  }
+  .day:hover { border-color: var(--rojo); }
+  .day.empty { background: transparent; border: none; cursor: default; }
+  .day .num { font-family: var(--fuente-titulo); font-size: 18px; letter-spacing: 1px; }
+  .day .turnos { display: flex; flex-direction: column; gap: 3px; }
+  .turno-pill {
+    font-family: var(--fuente-mono); font-size: 10px; padding: 2px 6px; border-radius: 2px;
+    display: flex; justify-content: space-between; background: var(--gris-medio); color: var(--gris-texto);
+    letter-spacing: 0.5px;
+  }
+  .turno-pill.full { background: rgba(245,196,0,0.12); color: var(--amarillo); }
+  .turno-pill.partial { background: rgba(211,47,47,0.18); color: #ff8a8a; }
+
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.78); display: none; align-items: center; justify-content: center; z-index: 50; padding: 20px; }
+  .overlay.show { display: flex; }
+  .modal {
+    background: var(--gris-medio); border: 1px solid var(--gris-borde); border-radius: 4px;
+    width: 100%; max-width: 900px; max-height: 88vh; overflow-y: auto; padding: 0;
+  }
+  .modal-head { background: var(--gris-oscuro); border-bottom: 2px solid var(--rojo); padding: 14px 20px; }
+  .modal-head h2 { font-family: var(--fuente-titulo); font-size: 22px; letter-spacing: 2px; color: #fff; }
+  .modal-head .sub { font-family: var(--fuente-mono); font-size: 11px; color: var(--gris-texto); letter-spacing: 0.5px; margin-top: 4px; }
+  .modal-body { padding: 18px 20px; }
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--gris-borde); }
+
+  .btn-primario {
+    background: var(--rojo); color: #fff; border: none; border-radius: 3px; padding: 10px 18px;
+    font-family: var(--fuente-titulo); font-size: 16px; letter-spacing: 1.5px; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-primario:hover { background: var(--rojo-vivo); }
+  .btn-primario:disabled { opacity: 0.5; cursor: default; }
+  .btn-secundario {
+    background: transparent; color: var(--gris-texto); border: 1px solid var(--gris-borde); border-radius: 3px;
+    padding: 10px 18px; font-family: var(--fuente-mono); font-size: 12px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s;
+  }
+  .btn-secundario:hover { border-color: var(--blanco); color: var(--blanco); }
+
+  .turno-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  .turno-col h3 {
+    font-family: var(--fuente-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gris-texto); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center;
+  }
+  .slot-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: center; }
+  .slot-row select.role {
+    width: 118px; flex: none; font-size: 11px; padding: 7px 4px; background: var(--negro);
+    border: 1px solid var(--gris-borde); color: var(--blanco); border-radius: 3px; font-family: var(--fuente-mono);
+  }
+  .slot-row input.name {
+    flex: 1; min-width: 0; font-size: 13px; background: var(--negro); border: 1px solid var(--gris-borde);
+    color: var(--blanco); border-radius: 3px; padding: 7px 8px; font-family: var(--fuente-cuerpo);
+  }
+  .slot-row input.name:focus, .slot-row select.role:focus { outline: none; border-color: var(--rojo); }
+  .slot-row .rm { background: transparent; border: none; color: var(--gris-texto); font-size: 17px; padding: 0 4px; line-height: 1; cursor: pointer; }
+  .slot-row .rm:hover { color: var(--rojo); }
+  .role-swatch { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+  .add-slot {
+    font-family: var(--fuente-mono); font-size: 11px; color: var(--gris-texto); background: transparent;
+    border: 1px dashed var(--gris-borde); width: 100%; padding: 7px; border-radius: 3px; text-align: left; cursor: pointer; letter-spacing: 0.5px;
+  }
+  .add-slot:hover { color: var(--amarillo); border-color: var(--amarillo); }
+  .full-note { font-family: var(--fuente-mono); font-size: 10.5px; color: var(--gris-texto); padding: 5px 2px; letter-spacing: 0.5px; }
+
+  .roster-list { display: flex; flex-direction: column; gap: 6px; max-height: 340px; overflow-y: auto; margin-bottom: 14px; }
+  .roster-row { display: flex; gap: 8px; align-items: center; font-size: 13px; }
+  .roster-row span { flex: 1; }
+  .add-person { display: flex; gap: 8px; }
+  .add-person input {
+    flex: 1; background: var(--negro); border: 1px solid var(--gris-borde); color: var(--blanco);
+    border-radius: 3px; padding: 9px 10px; font-family: var(--fuente-cuerpo); font-size: 13px;
+  }
+
+  .week-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .week-alert-summary { font-family: var(--fuente-mono); font-size: 11.5px; letter-spacing: 0.5px; color: var(--gris-texto); }
+  .week-alert-summary.has-alerts { color: #ff8a8a; }
+
+  table.week-table { width: 100%; border-collapse: collapse; }
+  table.week-table th {
+    text-align: left; font-family: var(--fuente-mono); font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--gris-texto); padding: 6px 8px; border-bottom: 1px solid var(--gris-borde);
+  }
+  table.week-table td { vertical-align: top; padding: 8px; border-bottom: 1px solid var(--gris-borde); font-size: 12.5px; }
+  table.week-table tr.out-of-month td { color: var(--gris-texto); font-style: italic; }
+  .wk-day-cell { cursor: pointer; white-space: nowrap; font-family: var(--fuente-mono); font-size: 11.5px; }
+  .wk-day-cell:hover { color: var(--amarillo); }
+  .wk-turno-cell { border-radius: 3px; cursor: pointer; }
+  .wk-turno-cell.ok { background: rgba(245,196,0,0.10); }
+  .wk-turno-cell.alert { background: rgba(211,47,47,0.16); box-shadow: inset 0 0 0 1px rgba(211,47,47,0.4); }
+  .wk-turno-cell.empty { background: transparent; color: var(--gris-texto); }
+  .wk-turno-head { display: flex; justify-content: space-between; font-family: var(--fuente-mono); font-size: 10px; margin-bottom: 4px; letter-spacing: 0.5px; }
+  .wk-turno-cell.alert .wk-turno-head { color: #ff8a8a; font-weight: 600; }
+  .wk-turno-cell.ok .wk-turno-head { color: var(--amarillo); }
+  .wk-names { display: flex; flex-direction: column; gap: 2px; }
+  .wk-name { display: flex; align-items: center; gap: 5px; font-size: 12px; }
+  .wk-name .role-swatch { width: 7px; height: 7px; }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(40px);
+    background: var(--amarillo); color: var(--negro);
+    font-family: var(--fuente-mono); font-size: 13px; letter-spacing: 1px;
+    padding: 10px 20px; border-radius: 3px;
+    opacity: 0; transition: all 0.3s; z-index: 999; white-space: nowrap;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--gris-oscuro); }
+  ::-webkit-scrollbar-thumb { background: var(--rojo-oscuro); border-radius: 3px; }
+
+  @media print {
+    header, .toolbar, .aviso, .leyenda, .overlay, .toast { display: none !important; }
+    body { background: #fff; color: #111; }
+    .day { border: 1px solid #999; background: #fff; break-inside: avoid; }
+  }
+  @media (max-width: 720px) {
+    .turno-cols { grid-template-columns: 1fr; }
+    .day { min-height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-icon">📋</div>
+  <div class="header-texto">
+    <h1>Carga de Guardias</h1>
+    <p>CUARTEL CENTRAL — TOPE DE 4 COMPONENTES POR GUARDIA</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="toolbar">
+    <select class="mes-sel" id="monthSel"></select>
+    <select class="year-sel" id="yearSel"></select>
+    <button class="btn-tool" id="btnRoster">👤 Personal</button>
+    <button class="btn-tool" id="btnWeek">📆 Ver por semana</button>
+    <button class="btn-tool" id="btnPrint">🖨 Imprimir</button>
+    <button class="btn-tool danger" id="btnReset">🗑 Vaciar mes</button>
+    <span class="estado-conexion" id="estadoConexion"><span class="punto"></span><span id="estadoTexto">Conectando…</span></span>
+  </div>
+
+  <div class="aviso">Las guardias no nos eximen de venir a los toques de sirena. Los datos se sincronizan en tiempo real — todos los que abran este archivo ven la misma información.</div>
+
+  <div class="leyenda">
+    <span class="chip"><span class="dot" style="background:var(--sub)"></span>Suboficial-Chofer</span>
+    <span class="chip"><span class="dot" style="background:var(--asp)"></span>Aspirante</span>
+    <span class="chip"><span class="dot" style="background:var(--fem)"></span>Guardia Femenina</span>
+    <span class="chip"><span class="dot" style="background:var(--dot)"></span>Dotación</span>
+  </div>
+
+  <div class="cal-grid" id="calHead"></div>
+  <div class="cal-grid" id="calGrid" style="margin-top:6px;"></div>
+</div>
+
+<!-- Day modal -->
+<div class="overlay" id="dayOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="dayTitle">Día</h2>
+      <div class="sub" id="dayFullLabel"></div>
+    </div>
+    <div class="modal-body">
+      <div class="turno-cols" id="turnoCols"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secundario" id="dayCancel">Cerrar</button>
+      <button class="btn-primario" id="daySave">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Roster modal -->
+<div class="overlay" id="rosterOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head">
+      <h2>Personal registrado</h2>
+      <div class="sub">Padrón del despachador — compartido entre todos los dispositivos.</div>
+    </div>
+    <div class="modal-body">
+      <div class="roster-list" id="rosterList"></div>
+      <div class="add-person">
+        <input type="text" id="newPersonName" placeholder="Apellido, Nombre">
+        <button class="btn-primario" id="addPersonBtn">Agregar</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secundario" id="rosterClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Weekly view modal -->
+<div class="overlay" id="weekOverlay">
+  <div class="modal" style="max-width:960px;">
+    <div class="modal-head">
+      <h2>Guardias por semana</h2>
+      <div class="sub" id="weekRangeLabel"></div>
+    </div>
+    <div class="modal-body">
+      <div class="week-nav">
+        <button class="btn-secundario" id="weekPrev">‹ Semana anterior</button>
+        <span id="weekAlertSummary" class="week-alert-summary"></span>
+        <button class="btn-secundario" id="weekNext">Semana siguiente ›</button>
+      </div>
+      <div id="weekTableWrap"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secundario" id="weekClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmación clave de seguridad para vaciar mes -->
+<div class="overlay" id="keyOverlay">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-head">
+      <h2>Confirmar borrado</h2>
+      <div class="sub">Esta acción borra las guardias del mes visible para todos. Ingresá la clave de seguridad.</div>
+    </div>
+    <div class="modal-body">
+      <input type="password" id="keyInput" placeholder="Clave de seguridad" style="width:100%;background:var(--negro);border:1px solid var(--gris-borde);color:var(--blanco);border-radius:3px;padding:9px 10px;font-family:var(--fuente-mono);">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secundario" id="keyCancel">Cancelar</button>
+      <button class="btn-primario" id="keyConfirm">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<datalist id="personnelList"></datalist>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- Firebase ----------
+const firebaseConfig = {
+  apiKey: "AIzaSyA_X-RBYpJUJWz7vFJz4-i8lX1lNXov6bM",
+  authDomain: "bvc-despacho.firebaseapp.com",
+  projectId: "bvc-despacho",
+  appId: "1:112751546055:web:52f292f3ce1ac1a838b8e2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const SECURITY_KEY = "BVC2026";
+
+function setConexion(status, texto){
+  const el = document.getElementById('estadoConexion');
+  el.classList.remove('ok','error');
+  if(status) el.classList.add(status);
+  document.getElementById('estadoTexto').textContent = texto;
+}
+
+const ROLES = [
+  {id:'sub', label:'Suboficial-Chofer', color:'var(--sub)'},
+  {id:'asp', label:'Aspirante', color:'var(--asp)'},
+  {id:'fem', label:'Guardia Femenina', color:'var(--fem)'},
+  {id:'dot', label:'Dotación', color:'var(--dot)'},
+];
+const TURNOS = [
+  {id:'manana', label:'Mañana'},
+  {id:'tarde', label:'Tarde'},
+  {id:'noche', label:'Noche'},
+];
+
+// Padrón real tomado del despachador (bomberos_canuelas.html), formato "Apellido, Nombre"
+const SEED_PERSONNEL = [
+  "Coronel, Pablo","Gimenez, Jonatan","Ortiz, Hernan","Cocini, Maximiliano",
+  "Vicente, Guillermo","Benigni, Jonatan","Larrosa, Maximiliano","Geiser, Eduardo",
+  "Bonavita, Damian","Toledo, Emiliano","Mansilla, Mailen","Lopez, Maximiliano",
+  "Cordovero, Pablo","Giacobino, Sebastian","Matrelo, Nicolas","Peralta, Jose Luis",
+  "Ludueña, Osvaldo","Ferrer, Juan Carlos","Bordon, Jose","Bugari, Alex",
+  "Antonio, Agustina","Maidana, Sebastian","Sanchez, Tamara","Tellechea, Milagros",
+  "Martinez, Silvio","Lopez, Matias","Perez Loayza, Fiamma","Bugari, Dylan",
+  "Yuli, Luis Alberto","García, Juan Pablo","Amuchastegui, Daniel","Rosas, Luis",
+  "Rosas, Pedro","Jaime, Mauro","Domínguez, Cristian","Rodríguez, Sebastián",
+  "Tellechea, Leonardo","Barragan, Javier","Bohler, Damian","Ferrandi, Mauro",
+  "Velozo, Javier","Rasquetti, Marcos","Montovio, Mariano","Salerno, Yamila",
+  "Silva, Jonathan","Roldan, Nicolas","Piñeiro, Daniel","Brito, Franco",
+  "Antilef, Jorge","Cardiello, Elias","Mujica, Sabrina","Higa, Nestor",
+  "Coronel, Camila","Rivero Lodoli, Jorge","Cordovero, Tomas","Bordon, Nestor",
+  "Monzon, Alejandra","Guillermo, Daiana","Colchado, Lucas","Smith, Cecilia",
+  "Stur, Gaston","Ovelar, Gretel Mayra","Tojo, Fernando","Avalos, Melania",
+  "Rios, Camila","Diaz, Samira","Mujica, Alexander","Rodriguez, Sol Morena",
+  "Maidana, Facundo","Quest, Estefania","Guercio, Oscar","Risso, Tobias",
+  "Fernandez, Oscar","Loseco, Ezequiel","Mancilla, Lucas","Fernandez, Facundo",
+  "Villalba, Mariana","Rosas, Federico","Valenzuela, Joel","Piedra, Emanuel",
+  "Tito, Bruno","Suarez, Facundo","Lopez, Facundo","Rodríguez, Monteros Enrique"
+];
+
+let state = { personnel: [], assignments: {} };
+let currentYear = 2026, currentMonth = 8; // Septiembre
+let activeDate = null;
+let modalAssign = null;
+let assignmentsUnsub = null;
+
+function pad(n){ return n<10 ? '0'+n : ''+n; }
+function dateKey(y,m,d){ return `${y}-${pad(m+1)}-${pad(d)}`; }
+function roleInfo(id){ return ROLES.find(r=>r.id===id) || ROLES[3]; }
+
+function fillPersonnelDatalist(){
+  const dl = document.getElementById('personnelList');
+  dl.innerHTML = state.personnel.map(p=>`<option value="${p}">`).join('');
+}
+function mostrarToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
+}
+
+// ---------- Personal: escucha en tiempo real ----------
+async function initPersonal(){
+  const ref = db.collection('meta').doc('personal');
+  try{
+    const snap = await ref.get();
+    if(!snap.exists){
+      await ref.set({ list: SEED_PERSONNEL.slice().sort() });
+    }
+  }catch(e){ console.error(e); }
+
+  ref.onSnapshot(snap=>{
+    if(snap.exists){
+      state.personnel = snap.data().list || [];
+    }
+    fillPersonnelDatalist();
+    if(document.getElementById('rosterOverlay').classList.contains('show')) renderRosterList();
+  }, err=>{ console.error(err); setConexion('error','Error de conexión'); });
+}
+
+async function guardarPersonal(){
+  await db.collection('meta').doc('personal').set({ list: state.personnel });
+}
+
+// ---------- Selectores mes/año ----------
+function initSelectors(){
+  const monthNames = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+  const mSel = document.getElementById('monthSel');
+  mSel.innerHTML = monthNames.map((n,i)=>`<option value="${i}">${n}</option>`).join('');
+  mSel.value = currentMonth;
+  mSel.addEventListener('change', ()=>{ currentMonth = parseInt(mSel.value); onMonthChange(); });
+
+  const ySel = document.getElementById('yearSel');
+  const years = [2025,2026,2027];
+  ySel.innerHTML = years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  ySel.value = currentYear;
+  ySel.addEventListener('change', ()=>{ currentYear = parseInt(ySel.value); onMonthChange(); });
+}
+
+function onMonthChange(){
+  attachAssignmentsListener();
+}
+
+// ---------- Rango de fechas visibles (mes + celdas de relleno) ----------
+function computeWeeks(year, month){
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const daysInPrevMonth = new Date(year, month, 0).getDate();
+  let startOffset = new Date(year, month, 1).getDay() - 1;
+  if(startOffset < 0) startOffset = 6;
+
+  const cells = [];
+  for(let i=startOffset-1; i>=0; i--){
+    cells.push({y:month===0?year-1:year, m:month===0?11:month-1, d:daysInPrevMonth-i, outOfMonth:true});
+  }
+  for(let d=1; d<=daysInMonth; d++){
+    cells.push({y:year, m:month, d, outOfMonth:false});
+  }
+  const nextM = month===11 ? 0 : month+1;
+  const nextY = month===11 ? year+1 : year;
+  let nextDay = 1;
+  while(cells.length % 7 !== 0){
+    cells.push({y:nextY, m:nextM, d:nextDay, outOfMonth:true});
+    nextDay++;
+  }
+  const out = [];
+  for(let i=0; i<cells.length; i+=7){
+    out.push(cells.slice(i,i+7));
+  }
+  return out;
+}
+function keyFor(cell){ return dateKey(cell.y, cell.m, cell.d); }
+
+// ---------- Guardias: escucha en tiempo real para el rango visible ----------
+function attachAssignmentsListener(){
+  if(assignmentsUnsub) assignmentsUnsub();
+  weeks = computeWeeks(currentYear, currentMonth);
+  const rangeStart = keyFor(weeks[0][0]);
+  const rangeEnd = keyFor(weeks[weeks.length-1][6]);
+
+  setConexion(null, 'Conectando…');
+  assignmentsUnsub = db.collection('guardias')
+    .where(firebase.firestore.FieldPath.documentId(), '>=', rangeStart)
+    .where(firebase.firestore.FieldPath.documentId(), '<=', rangeEnd)
+    .onSnapshot(snapshot=>{
+      // limpiar y repoblar solo las claves del rango visible
+      Object.keys(state.assignments).forEach(k=>{
+        if(k >= rangeStart && k <= rangeEnd) delete state.assignments[k];
+      });
+      snapshot.forEach(doc=>{
+        state.assignments[doc.id] = doc.data();
+      });
+      setConexion('ok','Sincronizado');
+      renderCalendar();
+      if(document.getElementById('weekOverlay').classList.contains('show')) renderWeekTable();
+    }, err=>{
+      console.error(err);
+      setConexion('error','Error de conexión — revisá las reglas de Firestore');
+    });
+}
+
+// ---------- Calendario ----------
+function renderCalendarHead(){
+  const days = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+  document.getElementById('calHead').innerHTML = days.map(d=>`<div class="cal-head">${d}</div>`).join('');
+}
+
+function renderCalendar(){
+  const grid = document.getElementById('calGrid');
+  const firstOfMonth = new Date(currentYear, currentMonth, 1);
+  let startOffset = firstOfMonth.getDay() - 1;
+  if(startOffset < 0) startOffset = 6;
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+
+  let html = '';
+  for(let i=0;i<startOffset;i++) html += '<div class="day empty"></div>';
+
+  for(let d=1; d<=daysInMonth; d++){
+    const key = dateKey(currentYear, currentMonth, d);
+    const rec = state.assignments[key] || {};
+    let pillsHtml = '';
+    TURNOS.forEach(t=>{
+      const list = rec[t.id] || [];
+      const count = list.length;
+      const cls = count===4 ? 'full' : (count>0 ? 'partial' : '');
+      pillsHtml += `<div class="turno-pill ${cls}"><span>${t.label[0]}</span><span>${count}/4</span></div>`;
+    });
+    html += `<div class="day" data-date="${key}">
+      <div class="num">${d}</div>
+      <div class="turnos">${pillsHtml}</div>
+    </div>`;
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.day[data-date]').forEach(el=>{
+    el.addEventListener('click', ()=>openDayModal(el.getAttribute('data-date')));
+  });
+}
+
+// ---------- Modal de día ----------
+function openDayModal(key){
+  activeDate = key;
+  modalAssign = JSON.parse(JSON.stringify(state.assignments[key] || {}));
+  TURNOS.forEach(t=>{ if(!modalAssign[t.id]) modalAssign[t.id] = []; });
+
+  const [y,m,d] = key.split('-').map(Number);
+  const dateObj = new Date(y, m-1, d);
+  const weekday = dateObj.toLocaleDateString('es-AR', {weekday:'long'});
+  document.getElementById('dayTitle').textContent = `${weekday.charAt(0).toUpperCase()+weekday.slice(1)} ${d}/${pad(m)}`;
+
+  renderTurnoCols();
+  document.getElementById('dayOverlay').classList.add('show');
+}
+
+function renderTurnoCols(){
+  const cols = document.getElementById('turnoCols');
+  cols.innerHTML = TURNOS.map(t=>renderTurnoCol(t)).join('');
+  attachTurnoColEvents();
+  updateFullLabel();
+}
+
+function renderTurnoCol(t){
+  const list = modalAssign[t.id];
+  let rows = list.map((entry, idx)=>slotRowHtml(t.id, idx, entry)).join('');
+  const addBtn = list.length < 4
+    ? `<button class="add-slot" data-turno="${t.id}">+ Agregar componente</button>`
+    : `<div class="full-note">Guardia completa (4/4)</div>`;
+  return `<div class="turno-col">
+    <h3><span>${t.label}</span><span>${list.length}/4</span></h3>
+    <div class="slots" data-turno="${t.id}">${rows}</div>
+    ${addBtn}
+  </div>`;
+}
+
+function slotRowHtml(turnoId, idx, entry){
+  const roleOpts = ROLES.map(r=>`<option value="${r.id}" ${entry.role===r.id?'selected':''}>${r.label}</option>`).join('');
+  const info = roleInfo(entry.role);
+  return `<div class="slot-row" data-turno="${turnoId}" data-idx="${idx}">
+    <span class="role-swatch" style="background:${info.color}"></span>
+    <select class="role">${roleOpts}</select>
+    <input type="text" class="name" list="personnelList" value="${entry.name || ''}" placeholder="Apellido, Nombre">
+    <button class="rm" title="Quitar">×</button>
+  </div>`;
+}
+
+function attachTurnoColEvents(){
+  document.querySelectorAll('.add-slot').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const tid = btn.getAttribute('data-turno');
+      if(modalAssign[tid].length >= 4) return;
+      modalAssign[tid].push({name:'', role:'dot'});
+      renderTurnoCols();
+    });
+  });
+  document.querySelectorAll('.slot-row').forEach(row=>{
+    const tid = row.getAttribute('data-turno');
+    const idx = parseInt(row.getAttribute('data-idx'));
+    row.querySelector('.role').addEventListener('change', e=>{
+      modalAssign[tid][idx].role = e.target.value;
+      row.querySelector('.role-swatch').style.background = roleInfo(e.target.value).color;
+    });
+    row.querySelector('.name').addEventListener('input', e=>{
+      modalAssign[tid][idx].name = e.target.value;
+    });
+    row.querySelector('.rm').addEventListener('click', ()=>{
+      modalAssign[tid].splice(idx,1);
+      renderTurnoCols();
+    });
+  });
+}
+
+function updateFullLabel(){
+  const total = TURNOS.reduce((sum,t)=>sum + modalAssign[t.id].length, 0);
+  document.getElementById('dayFullLabel').textContent = `${total} de 12 lugares cargados en el día (máx. 4 por turno).`;
+}
+
+document.getElementById('dayCancel').addEventListener('click', ()=>{
+  document.getElementById('dayOverlay').classList.remove('show');
+});
+document.getElementById('daySave').addEventListener('click', async ()=>{
+  const btn = document.getElementById('daySave');
+  btn.disabled = true; btn.textContent = 'Guardando…';
+
+  TURNOS.forEach(t=>{
+    modalAssign[t.id] = modalAssign[t.id].filter(e=>e.name && e.name.trim()!=='');
+  });
+  let personalNuevo = false;
+  TURNOS.forEach(t=>{
+    modalAssign[t.id].forEach(e=>{
+      const nm = e.name.trim();
+      e.name = nm;
+      if(!state.personnel.includes(nm)){ state.personnel.push(nm); personalNuevo = true; }
+    });
+  });
+
+  try{
+    const totalVacio = TURNOS.every(t=>modalAssign[t.id].length===0);
+    if(totalVacio){
+      await db.collection('guardias').doc(activeDate).delete();
+    } else {
+      await db.collection('guardias').doc(activeDate).set(modalAssign);
+    }
+    if(personalNuevo){
+      state.personnel.sort();
+      await guardarPersonal();
+    }
+    document.getElementById('dayOverlay').classList.remove('show');
+    mostrarToast('✓ Guardia guardada');
+  }catch(e){
+    console.error(e);
+    alert('No se pudo guardar. Revisá la conexión o las reglas de Firestore.');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Guardar';
+  }
+});
+
+// ---------- Roster modal ----------
+function renderRosterList(){
+  const list = document.getElementById('rosterList');
+  const sorted = state.personnel.slice().sort();
+  list.innerHTML = sorted.map(name=>`
+    <div class="roster-row" data-name="${name}">
+      <span>${name}</span>
+      <button class="btn-secundario rm-person" style="padding:5px 10px;">Quitar</button>
+    </div>`).join('');
+  list.querySelectorAll('.rm-person').forEach(btn=>{
+    btn.addEventListener('click', async (e)=>{
+      const name = e.target.closest('.roster-row').getAttribute('data-name');
+      if(confirm(`¿Quitar a ${name} del listado de personal? (no borra guardias ya cargadas)`)){
+        state.personnel = state.personnel.filter(p=>p!==name);
+        await guardarPersonal();
+      }
+    });
+  });
+}
+document.getElementById('btnRoster').addEventListener('click', ()=>{
+  renderRosterList();
+  document.getElementById('rosterOverlay').classList.add('show');
+});
+document.getElementById('rosterClose').addEventListener('click', ()=>{
+  document.getElementById('rosterOverlay').classList.remove('show');
+});
+document.getElementById('addPersonBtn').addEventListener('click', async ()=>{
+  const input = document.getElementById('newPersonName');
+  const nm = input.value.trim();
+  if(!nm) return;
+  if(!state.personnel.includes(nm)){
+    state.personnel.push(nm);
+    state.personnel.sort();
+    await guardarPersonal();
+  }
+  input.value='';
+});
+
+// ---------- Vista semanal ----------
+let weeks = [];
+let currentWeekIndex = 0;
+
+function renderWeekModal(){
+  weeks = computeWeeks(currentYear, currentMonth);
+  if(currentWeekIndex >= weeks.length) currentWeekIndex = weeks.length - 1;
+  if(currentWeekIndex < 0) currentWeekIndex = 0;
+  renderWeekTable();
+}
+
+function renderWeekTable(){
+  const week = weeks[currentWeekIndex];
+  const first = week.find(c=>!c.outOfMonth) || week[0];
+  const last = [...week].reverse().find(c=>!c.outOfMonth) || week[week.length-1];
+  document.getElementById('weekRangeLabel').textContent =
+    `Semana ${currentWeekIndex+1} de ${weeks.length} — del ${first.d}/${pad(first.m+1)} al ${last.d}/${pad(last.m+1)}`;
+
+  document.getElementById('weekPrev').disabled = currentWeekIndex === 0;
+  document.getElementById('weekNext').disabled = currentWeekIndex === weeks.length - 1;
+
+  let alertCount = 0;
+  const dayNames = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado","Domingo"];
+
+  let rows = '';
+  week.forEach((cell, i)=>{
+    const key = keyFor(cell);
+    const rec = state.assignments[key] || {};
+    let turnoCells = '';
+    TURNOS.forEach(t=>{
+      const list = rec[t.id] || [];
+      const count = list.length;
+      let cls = 'empty';
+      if(count === 4) cls = 'ok';
+      else if(count > 0){ cls = 'alert'; if(!cell.outOfMonth) alertCount++; }
+      const names = list.map(e=>{
+        const info = roleInfo(e.role);
+        return `<div class="wk-name"><span class="role-swatch" style="background:${info.color}"></span>${e.name}</div>`;
+      }).join('');
+      turnoCells += `<td class="wk-turno-cell ${cls}" data-date="${key}">
+        <div class="wk-turno-head"><span>${t.label}</span><span>${count}/4</span></div>
+        <div class="wk-names">${names || (cell.outOfMonth ? '' : '<span style=\'color:var(--gris-texto)\'>Sin cargar</span>')}</div>
+      </td>`;
+    });
+    rows += `<tr class="${cell.outOfMonth?'out-of-month':''}">
+      <td class="wk-day-cell" data-date="${key}">${dayNames[i]}<br>${cell.d}/${pad(cell.m+1)}</td>
+      ${turnoCells}
+    </tr>`;
+  });
+
+  document.getElementById('weekTableWrap').innerHTML = `
+    <table class="week-table">
+      <thead><tr><th>Día</th>${TURNOS.map(t=>`<th>${t.label}</th>`).join('')}</tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  const summaryEl = document.getElementById('weekAlertSummary');
+  if(alertCount > 0){
+    summaryEl.textContent = `⚠ ${alertCount} turno${alertCount>1?'s':''} incompleto${alertCount>1?'s':''} esta semana`;
+    summaryEl.classList.add('has-alerts');
+  } else {
+    summaryEl.textContent = 'Sin turnos incompletos esta semana';
+    summaryEl.classList.remove('has-alerts');
+  }
+
+  document.querySelectorAll('#weekTableWrap [data-date]').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      document.getElementById('weekOverlay').classList.remove('show');
+      openDayModal(el.getAttribute('data-date'));
+    });
+  });
+}
+
+document.getElementById('btnWeek').addEventListener('click', ()=>{
+  currentWeekIndex = 0;
+  renderWeekModal();
+  document.getElementById('weekOverlay').classList.add('show');
+});
+document.getElementById('weekPrev').addEventListener('click', ()=>{
+  if(currentWeekIndex > 0){ currentWeekIndex--; renderWeekTable(); }
+});
+document.getElementById('weekNext').addEventListener('click', ()=>{
+  if(currentWeekIndex < weeks.length-1){ currentWeekIndex++; renderWeekTable(); }
+});
+document.getElementById('weekClose').addEventListener('click', ()=>{
+  document.getElementById('weekOverlay').classList.remove('show');
+});
+
+// ---------- Imprimir / vaciar mes (con clave de seguridad) ----------
+document.getElementById('btnPrint').addEventListener('click', ()=> window.print());
+
+document.getElementById('btnReset').addEventListener('click', ()=>{
+  document.getElementById('keyInput').value = '';
+  document.getElementById('keyOverlay').classList.add('show');
+});
+document.getElementById('keyCancel').addEventListener('click', ()=>{
+  document.getElementById('keyOverlay').classList.remove('show');
+});
+document.getElementById('keyConfirm').addEventListener('click', async ()=>{
+  const val = document.getElementById('keyInput').value;
+  if(val !== SECURITY_KEY){
+    alert('Clave incorrecta.');
+    return;
+  }
+  document.getElementById('keyOverlay').classList.remove('show');
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  const batch = db.batch();
+  for(let d=1; d<=daysInMonth; d++){
+    batch.delete(db.collection('guardias').doc(dateKey(currentYear,currentMonth,d)));
+  }
+  try{
+    await batch.commit();
+    mostrarToast('✓ Mes vaciado');
+  }catch(e){
+    console.error(e);
+    alert('No se pudo vaciar el mes. Revisá la conexión.');
+  }
+});
+
+document.querySelectorAll('.overlay').forEach(ov=>{
+  ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); });
+});
+
+// ---------- init ----------
+initSelectors();
+renderCalendarHead();
+initPersonal();
+attachAssignmentsListener();
+</script>
+</body>
+</html>
