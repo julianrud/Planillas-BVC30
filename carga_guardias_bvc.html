@@ -227,6 +227,24 @@
     body { background: #fff; color: #111; }
     .day { border: 1px solid #999; background: #fff; break-inside: avoid; }
   }
+  @media print {
+    body.print-week-mode .container { display: none !important; }
+    body.print-week-mode .overlay:not(#weekOverlay) { display: none !important; }
+    body.print-week-mode #weekOverlay {
+      display: block !important; position: static !important; background: none !important; padding: 0 !important;
+    }
+    body.print-week-mode #weekOverlay .modal {
+      max-width: 100% !important; max-height: none !important; overflow: visible !important;
+      border: none !important; background: #fff !important; color: #111 !important;
+    }
+    body.print-week-mode #weekOverlay .modal-head { background: #fff !important; border-bottom: 2px solid #111 !important; }
+    body.print-week-mode #weekOverlay .modal-head h2 { color: #111 !important; }
+    body.print-week-mode .week-nav, body.print-week-mode .modal-actions { display: none !important; }
+    body.print-week-mode table.week-table th,
+    body.print-week-mode table.week-table td { color: #111 !important; border-color: #999 !important; }
+    body.print-week-mode .wk-turno-cell.ok { background: #eee !important; }
+    body.print-week-mode .wk-turno-cell.alert { background: #fdd !important; box-shadow: none !important; }
+  }
   @media (max-width: 720px) {
     .turno-cols { grid-template-columns: 1fr; }
     .day { min-height: auto; }
@@ -239,7 +257,7 @@
   <div class="header-icon">📋</div>
   <div class="header-texto">
     <h1>Carga de Guardias</h1>
-    <p>CUARTEL CENTRAL — TOPE DE 4 COMPONENTES POR GUARDIA</p>
+    <p>CUARTEL CENTRAL — TOPE DE 6 COMPONENTES POR GUARDIA</p>
   </div>
 </header>
 
@@ -253,6 +271,7 @@
     <button class="btn-tool" id="btnMisGuardias">🗓 Mis guardias</button>
     <button class="btn-tool" id="btnPrint">🖨 Imprimir</button>
     <button class="btn-tool danger" id="btnReset">🗑 Vaciar mes</button>
+    <button class="btn-tool" id="btnImportSept">⬆ Importar Septiembre</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
       <span class="estado-usuario" id="estadoUsuario"></span>
       <span class="estado-conexion" id="estadoConexion"><span class="punto"></span><span id="estadoTexto">Conectando…</span></span>
@@ -343,6 +362,7 @@
     </div>
     <div class="modal-actions">
       <button class="btn-secundario" id="weekClose">Cerrar</button>
+      <button class="btn-primario" id="weekPrintBtn">🖨 Imprimir esta semana</button>
     </div>
   </div>
 </div>
@@ -559,6 +579,7 @@ function applyPermissionsUI(){
   const admin = currentIsAdmin();
   document.getElementById('btnRoster').style.display = admin ? '' : 'none';
   document.getElementById('btnReset').style.display = admin ? '' : 'none';
+  document.getElementById('btnImportSept').style.display = admin ? '' : 'none';
   document.getElementById('btnMisGuardias').style.display = currentIsUser() ? '' : 'none';
   const usuarioEl = document.getElementById('estadoUsuario');
   if(admin){
@@ -759,8 +780,8 @@ function renderCalendar(){
     let pillsHtml = '';
     TURNOS.forEach(t=>{
       const list = rec[t.id] || [];
-      const count = list.length;
-      const cls = count===4 ? 'full' : (count>0 ? 'partial' : '');
+      const count = formalCount(list);
+      const cls = count===6 ? 'full' : (count>0 ? 'partial' : '');
       pillsHtml += `<div class="turno-pill ${cls}"><span>${t.label[0]}</span><span>${count}/4</span></div>`;
     });
     html += `<div class="day" data-date="${key}">
@@ -798,9 +819,13 @@ function renderTurnoCols(){
   updateFullLabel();
 }
 
+function formalCount(list){ return list.filter(e=>e.role !== 'asp').length; }
+
 function renderTurnoCol(t){
   const list = modalAssign[t.id];
   const admin = currentIsAdmin();
+  const formal = formalCount(list);
+  const aspirantes = list.length - formal;
   const rows = list.map((entry, idx)=>{
     let mode = 'readonly';
     if(admin) mode = 'admin';
@@ -810,22 +835,24 @@ function renderTurnoCol(t){
 
   let addBtn = '';
   if(admin){
-    addBtn = list.length < 4
-      ? `<button class="add-slot" data-turno="${t.id}">+ Agregar componente</button>`
-      : `<div class="full-note">Guardia completa (4/4)</div>`;
+    addBtn = `<button class="add-slot" data-turno="${t.id}">+ Agregar componente</button>`;
   } else if(currentIsUser()){
     const yaAnotado = list.some(e=>e.name === session.name);
     if(yaAnotado){
       addBtn = '';
-    } else if(list.length >= 4){
-      addBtn = `<div class="full-note">Guardia completa (4/4)</div>`;
+    } else if(formal >= 6){
+      addBtn = `<div class="full-note">Cupo formal completo (6/6)</div>`;
     } else {
       addBtn = `<button class="add-slot" data-turno="${t.id}">+ Anotarme en este turno</button>`;
     }
   }
 
+  const contador = aspirantes > 0
+    ? `${formal}/6 <span style="color:var(--gris-texto);">+${aspirantes} asp.</span>`
+    : `${formal}/6`;
+
   return `<div class="turno-col">
-    <h3><span>${t.label}</span><span>${list.length}/4</span></h3>
+    <h3><span>${t.label}</span><span>${contador}</span></h3>
     <div class="slots" data-turno="${t.id}">${rows}</div>
     ${addBtn}
   </div>`;
@@ -858,8 +885,8 @@ function attachTurnoColEvents(){
     document.querySelectorAll('.add-slot').forEach(btn=>{
       btn.addEventListener('click', ()=>{
         const tid = btn.getAttribute('data-turno');
-        if(modalAssign[tid].length >= 4) return;
-        modalAssign[tid].push({name:'', role:'dot'});
+        const defaultRole = formalCount(modalAssign[tid]) >= 6 ? 'asp' : 'dot';
+        modalAssign[tid].push({name:'', role:defaultRole});
         renderTurnoCols();
       });
     });
@@ -904,7 +931,7 @@ function attachTurnoColEvents(){
 async function anotarmeEnTurno(turnoId){
   if(!currentIsUser()) return;
   const current = (state.assignments[activeDate] && state.assignments[activeDate][turnoId]) || [];
-  if(current.length >= 4){ mostrarToast('⚠ Turno completo'); return; }
+  if(formalCount(current) >= 6){ mostrarToast('⚠ Cupo formal completo'); return; }
   if(current.some(e=>e.name === session.name)) return;
   const nuevoEntry = {name: session.name, role: 'dot'};
   try{
@@ -946,8 +973,10 @@ async function cambiarRolPropio(turnoId, oldEntry, newRole){
 }
 
 function updateFullLabel(){
-  const total = TURNOS.reduce((sum,t)=>sum + modalAssign[t.id].length, 0);
-  document.getElementById('dayFullLabel').textContent = `${total} de 12 lugares cargados en el día (máx. 4 por turno).`;
+  const totalFormal = TURNOS.reduce((sum,t)=>sum + formalCount(modalAssign[t.id]), 0);
+  const totalAsp = TURNOS.reduce((sum,t)=>sum + (modalAssign[t.id].length - formalCount(modalAssign[t.id])), 0);
+  const aspTxt = totalAsp > 0 ? ` · ${totalAsp} aspirante${totalAsp!==1?'s':''} anotado${totalAsp!==1?'s':''}` : '';
+  document.getElementById('dayFullLabel').textContent = `${totalFormal} de 18 lugares formales cargados en el día (máx. 6 por turno)${aspTxt}.`;
 }
 
 document.getElementById('dayCancel').addEventListener('click', ()=>{
@@ -1066,16 +1095,18 @@ function renderWeekTable(){
     let turnoCells = '';
     TURNOS.forEach(t=>{
       const list = rec[t.id] || [];
-      const count = list.length;
+      const formal = formalCount(list);
+      const aspirantes = list.length - formal;
       let cls = 'empty';
-      if(count === 4) cls = 'ok';
-      else if(count > 0){ cls = 'alert'; if(!cell.outOfMonth) alertCount++; }
+      if(formal === 6) cls = 'ok';
+      else if(list.length > 0){ cls = 'alert'; if(!cell.outOfMonth) alertCount++; }
       const names = list.map(e=>{
         const info = roleInfo(e.role);
         return `<div class="wk-name"><span class="role-swatch" style="background:${info.color}"></span>${e.name}</div>`;
       }).join('');
+      const contador = aspirantes > 0 ? `${formal}/6 +${aspirantes}` : `${formal}/6`;
       turnoCells += `<td class="wk-turno-cell ${cls}" data-date="${key}">
-        <div class="wk-turno-head"><span>${t.label}</span><span>${count}/4</span></div>
+        <div class="wk-turno-head"><span>${t.label}</span><span>${contador}</span></div>
         <div class="wk-names">${names || (cell.outOfMonth ? '' : '<span style=\'color:var(--gris-texto)\'>Sin cargar</span>')}</div>
       </td>`;
     });
@@ -1121,6 +1152,13 @@ document.getElementById('weekNext').addEventListener('click', ()=>{
 });
 document.getElementById('weekClose').addEventListener('click', ()=>{
   document.getElementById('weekOverlay').classList.remove('show');
+});
+document.getElementById('weekPrintBtn').addEventListener('click', ()=>{
+  document.body.classList.add('print-week-mode');
+  window.print();
+});
+window.addEventListener('afterprint', ()=>{
+  document.body.classList.remove('print-week-mode');
 });
 
 // ---------- Mis guardias ----------
@@ -1220,6 +1258,73 @@ document.getElementById('keyConfirm').addEventListener('click', async ()=>{
 document.querySelectorAll('.overlay:not(#loginOverlay)').forEach(ov=>{
   ov.addEventListener('click', (e)=>{ if(e.target===ov) ov.classList.remove('show'); });
 });
+
+// ---------- Importar cronograma de Septiembre (carga inicial desde el PDF) ----------
+const SEPTIEMBRE_2026_IMPORT = {"2026-09-01":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Risso, Tobias","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Pereira","role":"asp"}],"tarde":[{"name":"Domínguez, Cristian","role":"dot"},{"name":"García, Juan Pablo","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Quest, Estefania","role":"fem"},{"name":"Perez Loayza, Fiamma","role":"fem"}]},"2026-09-02":{"manana":[{"name":"Antonio, Agustina","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Perez Loayza, Fiamma","role":"sub"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Guercio, Oscar","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"García, Juan Pablo","role":"sub"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"}]},"2026-09-03":{"manana":[{"name":"Piedra, Emanuel","role":"dot"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"Gomez","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Suarez, Facundo","role":"dot"}]},"2026-09-04":{"manana":[{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Trejo","role":"asp"},{"name":"Gomez","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Benigni, Jonatan","role":"fem"},{"name":"Antonio, Agustina","role":"fem"}]},"2026-09-05":{"manana":[{"name":"Quest, Estefania","role":"sub"},{"name":"Antonio, Agustina","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Serrano","role":"asp"},{"name":"Tito, Bruno","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Bohler, Damian","role":"dot"}]},"2026-09-06":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"García, Juan Pablo","role":"asp"}],"tarde":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-07":{"manana":[{"name":"Pereira","role":"asp"},{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Antonio, Agustina","role":"fem"}]},"2026-09-08":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Risso, Tobias","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Orellano","role":"asp"},{"name":"Tito, Bruno","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"García, Juan Pablo","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-09":{"manana":[{"name":"Antonio, Agustina","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Jaime, Mauro","role":"sub"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Mancilla, Lucas","role":"dot"}]},"2026-09-10":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Pereira","role":"asp"},{"name":"Orellano","role":"asp"},{"name":"Tito, Bruno","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Perez Loayza, Fiamma","role":"fem"},{"name":"Montovio, Mariano","role":"fem"}]},"2026-09-11":{"manana":[{"name":"Piedra, Emanuel","role":"dot"},{"name":"Pereira","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Benigni, Jonatan","role":"dot"},{"name":"Bohler, Damian","role":"dot"}]},"2026-09-12":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Pereira","role":"asp"}],"tarde":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Gomez","role":"asp"},{"name":"Trejo","role":"asp"}],"noche":[{"name":"Mancilla, Lucas","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-13":{"manana":[{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"}]},"2026-09-14":{"manana":[{"name":"Antonio, Agustina","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Orellano","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"García, Juan Pablo","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"},{"name":"Bohler, Damian","role":"asp"}]},"2026-09-15":{"manana":[],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Santiago","role":"asp"}]},"2026-09-16":{"manana":[{"name":"Antonio, Agustina","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Domínguez, Cristian","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Perez Loayza, Fiamma","role":"fem"}]},"2026-09-17":{"manana":[{"name":"Risso, Tobias","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Suarez, Facundo","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Suarez, Facundo","role":"asp"}]},"2026-09-18":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Gomez","role":"asp"},{"name":"Nuttini","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Bohler, Damian","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-19":{"manana":[{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"}],"tarde":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"fem"}]},"2026-09-20":{"manana":[{"name":"Risso, Tobias","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Gomez","role":"asp"},{"name":"Trejo","role":"asp"}],"noche":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Bohler, Damian","role":"asp"},{"name":"Lavandera","role":"asp"}]},"2026-09-21":{"manana":[{"name":"Antonio, Agustina","role":"dot"},{"name":"Risso, Tobias","role":"dot"},{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Jaime, Mauro","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"}]},"2026-09-22":{"manana":[{"name":"Piedra, Emanuel","role":"dot"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Montovio, Mariano","role":"fem"},{"name":"Perez Loayza, Fiamma","role":"fem"},{"name":"Rodríguez, Sebastián","role":"fem"}]},"2026-09-23":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Antonio, Agustina","role":"dot"},{"name":"Lavandera","role":"asp"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Orellano","role":"asp"}],"noche":[{"name":"García, Juan Pablo","role":"sub"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"}]},"2026-09-24":{"manana":[{"name":"Risso, Tobias","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-25":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Orellano","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Lopez, Matias","role":"sub"},{"name":"Rodriguez, Sol Morena","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Nuttini","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"Rodríguez, Sebastián","role":"fem"}]},"2026-09-26":{"manana":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Suarez, Facundo","role":"dot"},{"name":"Gomez","role":"asp"},{"name":"Etchart","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Suarez, Facundo","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Tito, Bruno","role":"dot"}]},"2026-09-27":{"manana":[{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"tarde":[{"name":"Benigni, Jonatan","role":"sub"},{"name":"Nuttini","role":"asp"},{"name":"Gomez","role":"asp"},{"name":"Trejo","role":"asp"}],"noche":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"},{"name":"Bohler, Damian","role":"dot"}]},"2026-09-28":{"manana":[{"name":"Giacobino, Sebastian","role":"sub"},{"name":"Rodríguez, Monteros Enrique","role":"dot"},{"name":"Piedra, Emanuel","role":"dot"},{"name":"Orellano","role":"asp"},{"name":"Lavandera","role":"asp"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Perez Loayza, Fiamma","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"Quest, Estefania","role":"sub"},{"name":"García, Juan Pablo","role":"fem"},{"name":"Jaime, Mauro","role":"fem"}]},"2026-09-29":{"manana":[{"name":"Orellano","role":"asp"}],"tarde":[{"name":"Tojo, Fernando","role":"dot"},{"name":"Trejo","role":"asp"},{"name":"García, Juan Pablo","role":"asp"}],"noche":[{"name":"Montovio, Mariano","role":"sub"},{"name":"Matrelo, Nicolas","role":"dot"},{"name":"Rodríguez, Sebastián","role":"dot"},{"name":"Rasquetti, Marcos","role":"dot"}]},"2026-09-30":{"manana":[{"name":"Piedra, Emanuel","role":"dot"},{"name":"Lavandera","role":"asp"},{"name":"Santiago","role":"asp"}],"tarde":[{"name":"Guercio, Oscar","role":"sub"},{"name":"Tojo, Fernando","role":"dot"},{"name":"Valenzuela, Joel","role":"dot"},{"name":"Serrano","role":"asp"},{"name":"Nuttini","role":"asp"}],"noche":[{"name":"Mancilla, Lucas","role":"dot"},{"name":"Tito, Bruno","role":"dot"},{"name":"Bohler, Damian","role":"dot"}]}}
+;
+const SEPTIEMBRE_2026_ASPIRANTES_NUEVOS = ['Pereira','Etchart','Orellano','Serrano','Trejo','Santiago','Lavandera','Nuttini','Gomez'];
+const SEPTIEMBRE_2026_PENDIENTES = [
+  {fecha:'2026-09-02', turno:'Mañana', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-11', turno:'Noche', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-12', turno:'Noche', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-15', turno:'Mañana', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-19', turno:'Mañana', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-18', turno:'Noche', rol:'Dotación'}
+];
+
+async function importarSeptiembre(){
+  if(!currentIsAdmin()) return;
+  const dias = Object.keys(SEPTIEMBRE_2026_IMPORT).length;
+  const ok = confirm(
+    `Esto va a cargar/sobrescribir las guardias de ${dias} dias de septiembre 2026 con los datos del cronograma en PDF.\n\n` +
+    `Se van a agregar ${SEPTIEMBRE_2026_ASPIRANTES_NUEVOS.length} aspirantes nuevos al padron (sin legajo, a completar despues).\n\n` +
+    `Ademas quedan 6 casillas con un LOPEZ ambiguo que NO se van a cargar (hay que asignarlas a mano).\n\n` +
+    `Continuar?`
+  );
+  if(!ok) return;
+
+  const btn = document.getElementById('btnImportSept');
+  btn.disabled = true; btn.textContent = 'Importando...';
+
+  try{
+    let nuevos = false;
+    SEPTIEMBRE_2026_ASPIRANTES_NUEVOS.forEach(nm=>{
+      if(!state.personnel.some(p=>p.name===nm)){
+        state.personnel.push({name:nm, lp:null, grado:'Aspirante'});
+        nuevos = true;
+      }
+    });
+    if(nuevos){
+      state.personnel.sort((a,b)=>a.name.localeCompare(b.name));
+      await guardarPersonal();
+    }
+
+    const entries = Object.entries(SEPTIEMBRE_2026_IMPORT);
+    const CHUNK = 15;
+    for(let i=0; i<entries.length; i+=CHUNK){
+      const batch = db.batch();
+      entries.slice(i, i+CHUNK).forEach(([fecha, turnos])=>{
+        batch.set(db.collection('guardias').doc(fecha), turnos);
+      });
+      await batch.commit();
+    }
+
+    const pendientesTxt = SEPTIEMBRE_2026_PENDIENTES
+      .map(p=>`- ${p.fecha} (${p.turno}, ${p.rol})`).join('\n');
+    alert(
+      `Importacion completa: ${entries.length} dias cargados.\n\n` +
+      `Quedan estas casillas sin asignar por el LOPEZ ambiguo, cargalas a mano cuando confirmes de cual Lopez se trata:\n` +
+      pendientesTxt
+    );
+    mostrarToast(`Septiembre importado (${entries.length} dias)`);
+  }catch(e){
+    console.error(e);
+    alert('No se pudo completar la importacion. Revisa la conexion o las reglas de Firestore.');
+  }finally{
+    btn.disabled = false; btn.textContent = '⬆ Importar Septiembre';
+  }
+}
+document.getElementById('btnImportSept').addEventListener('click', importarSeptiembre);
 
 // ---------- sesión ----------
 session = loadSessionFromStorage();
