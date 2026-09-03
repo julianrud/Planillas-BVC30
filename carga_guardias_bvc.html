@@ -24,9 +24,18 @@
     --fuente-cuerpo: 'IBM Plex Sans', sans-serif;
 
     --sub: var(--rojo);
+    --encargado: #9d7cd8;
     --asp: var(--amarillo);
     --fem: #4fb3bf;
     --dot: #7c8a99;
+  }
+  body.light-mode {
+    --negro: #f4f3f1;
+    --gris-oscuro: #ffffff;
+    --gris-medio: #ffffff;
+    --gris-borde: #dcdad6;
+    --gris-texto: #6b6b6b;
+    --blanco: #171717;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--negro); color: var(--blanco); font-family: var(--fuente-cuerpo); min-height: 100vh; overflow-x: hidden; }
@@ -270,8 +279,10 @@
     <button class="btn-tool" id="btnWeek">📆 Ver por semana</button>
     <button class="btn-tool" id="btnMisGuardias">🗓 Mis guardias</button>
     <button class="btn-tool" id="btnPrint">🖨 Imprimir</button>
+    <button class="btn-tool" id="btnTheme">☀️ Fondo claro</button>
     <button class="btn-tool danger" id="btnReset">🗑 Vaciar mes</button>
     <button class="btn-tool" id="btnImportSept">⬆ Importar Septiembre</button>
+    <button class="btn-tool" id="btnDetalle">🧾 Detalle por integrante</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:14px;">
       <span class="estado-usuario" id="estadoUsuario"></span>
       <span class="estado-conexion" id="estadoConexion"><span class="punto"></span><span id="estadoTexto">Conectando…</span></span>
@@ -281,7 +292,8 @@
   <div class="aviso">Las guardias no nos eximen de venir a los toques de sirena. Los datos se sincronizan en tiempo real — todos los que abran este archivo ven la misma información.</div>
 
   <div class="leyenda">
-    <span class="chip"><span class="dot" style="background:var(--sub)"></span>Suboficial-Chofer</span>
+    <span class="chip"><span class="dot" style="background:var(--sub)"></span>Chofer</span>
+    <span class="chip"><span class="dot" style="background:var(--encargado)"></span>Encargado de Guardia</span>
     <span class="chip"><span class="dot" style="background:var(--asp)"></span>Aspirante</span>
     <span class="chip"><span class="dot" style="background:var(--fem)"></span>Guardia Femenina</span>
     <span class="chip"><span class="dot" style="background:var(--dot)"></span>Dotación</span>
@@ -341,6 +353,26 @@
     </div>
     <div class="modal-actions">
       <button class="btn-secundario" id="mgClose">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detalle por integrante (admin) -->
+<div class="overlay" id="detalleOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h2>Detalle por integrante</h2>
+      <div class="sub">Elegí a alguien del padrón para ver todas sus guardias registradas.</div>
+    </div>
+    <div class="modal-body">
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <select id="detallePersonaSelect" style="flex:1;background:var(--negro);border:1px solid var(--gris-borde);color:var(--blanco);border-radius:3px;padding:9px 10px;font-family:var(--fuente-cuerpo);font-size:13px;"></select>
+        <button class="btn-primario" id="detalleVerBtn">Ver</button>
+      </div>
+      <div class="mg-list" id="detalleList"><div class="mg-empty">Elegí un integrante y tocá "Ver".</div></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secundario" id="detalleClose">Cerrar</button>
     </div>
   </div>
 </div>
@@ -424,7 +456,8 @@ function setConexion(status, texto){
 }
 
 const ROLES = [
-  {id:'sub', label:'Suboficial-Chofer', color:'var(--sub)'},
+  {id:'sub', label:'Chofer', color:'var(--sub)'},
+  {id:'encargado', label:'Encargado de Guardia', color:'var(--encargado)'},
   {id:'asp', label:'Aspirante', color:'var(--asp)'},
   {id:'fem', label:'Guardia Femenina', color:'var(--fem)'},
   {id:'dot', label:'Dotación', color:'var(--dot)'},
@@ -580,6 +613,7 @@ function applyPermissionsUI(){
   document.getElementById('btnRoster').style.display = admin ? '' : 'none';
   document.getElementById('btnReset').style.display = admin ? '' : 'none';
   document.getElementById('btnImportSept').style.display = admin ? '' : 'none';
+  document.getElementById('btnDetalle').style.display = admin ? '' : 'none';
   document.getElementById('btnMisGuardias').style.display = currentIsUser() ? '' : 'none';
   const usuarioEl = document.getElementById('estadoUsuario');
   if(admin){
@@ -1161,18 +1195,14 @@ window.addEventListener('afterprint', ()=>{
   document.body.classList.remove('print-week-mode');
 });
 
-// ---------- Mis guardias ----------
+// ---------- Mis guardias / Detalle por integrante (lógica compartida) ----------
 function formatFechaCorta(key){
   const [y,m,d] = key.split('-').map(Number);
   return `${d}/${pad(m)}`;
 }
-async function verMisGuardias(){
-  if(!currentIsUser()) return;
-  const overlay = document.getElementById('misGuardiasOverlay');
-  const listEl = document.getElementById('mgList');
-  listEl.innerHTML = '<div class="mg-empty">Cargando…</div>';
-  overlay.classList.add('show');
 
+async function cargarGuardiasDePersona(nombre, listEl){
+  listEl.innerHTML = '<div class="mg-empty">Cargando…</div>';
   try{
     const snapshot = await db.collection('guardias').get();
     const now = new Date();
@@ -1183,7 +1213,7 @@ async function verMisGuardias(){
       const data = doc.data();
       TURNOS.forEach(t=>{
         (data[t.id] || []).forEach(entry=>{
-          if(entry.name === session.name){
+          if(entry.name === nombre){
             items.push({ dateKeyVal: doc.id, turno: t, role: entry.role });
           }
         });
@@ -1192,7 +1222,7 @@ async function verMisGuardias(){
     items.sort((a,b)=> a.dateKeyVal.localeCompare(b.dateKeyVal));
 
     if(items.length === 0){
-      listEl.innerHTML = '<div class="mg-empty">Todavía no tenés guardias anotadas.</div>';
+      listEl.innerHTML = '<div class="mg-empty">Todavía no tiene guardias anotadas.</div>';
       return;
     }
 
@@ -1219,9 +1249,37 @@ async function verMisGuardias(){
     listEl.innerHTML = '<div class="mg-empty">No se pudo cargar. Revisá la conexión.</div>';
   }
 }
+
+async function verMisGuardias(){
+  if(!currentIsUser()) return;
+  const overlay = document.getElementById('misGuardiasOverlay');
+  overlay.classList.add('show');
+  await cargarGuardiasDePersona(session.name, document.getElementById('mgList'));
+}
 document.getElementById('btnMisGuardias').addEventListener('click', verMisGuardias);
 document.getElementById('mgClose').addEventListener('click', ()=>{
   document.getElementById('misGuardiasOverlay').classList.remove('show');
+});
+
+// ---------- Detalle por integrante (admin) ----------
+function fillDetalleSelect(){
+  const sel = document.getElementById('detallePersonaSelect');
+  const sorted = state.personnel.slice().sort((a,b)=>a.name.localeCompare(b.name));
+  sel.innerHTML = sorted.map(p=>`<option value="${p.name}">${p.name}</option>`).join('');
+}
+document.getElementById('btnDetalle').addEventListener('click', ()=>{
+  if(!currentIsAdmin()) return;
+  fillDetalleSelect();
+  document.getElementById('detalleList').innerHTML = '<div class="mg-empty">Elegí un integrante y tocá "Ver".</div>';
+  document.getElementById('detalleOverlay').classList.add('show');
+});
+document.getElementById('detalleVerBtn').addEventListener('click', ()=>{
+  const nombre = document.getElementById('detallePersonaSelect').value;
+  if(!nombre) return;
+  cargarGuardiasDePersona(nombre, document.getElementById('detalleList'));
+});
+document.getElementById('detalleClose').addEventListener('click', ()=>{
+  document.getElementById('detalleOverlay').classList.remove('show');
 });
 
 // ---------- Imprimir / vaciar mes (con clave de seguridad) ----------
@@ -1264,11 +1322,11 @@ const SEPTIEMBRE_2026_IMPORT = {"2026-09-01":{"manana":[{"name":"Giacobino, Seba
 ;
 const SEPTIEMBRE_2026_ASPIRANTES_NUEVOS = ['Pereira','Etchart','Orellano','Serrano','Trejo','Santiago','Lavandera','Nuttini','Gomez'];
 const SEPTIEMBRE_2026_PENDIENTES = [
-  {fecha:'2026-09-02', turno:'Mañana', rol:'Suboficial-Chofer'},
-  {fecha:'2026-09-11', turno:'Noche', rol:'Suboficial-Chofer'},
-  {fecha:'2026-09-12', turno:'Noche', rol:'Suboficial-Chofer'},
-  {fecha:'2026-09-15', turno:'Mañana', rol:'Suboficial-Chofer'},
-  {fecha:'2026-09-19', turno:'Mañana', rol:'Suboficial-Chofer'},
+  {fecha:'2026-09-02', turno:'Mañana', rol:'Chofer'},
+  {fecha:'2026-09-11', turno:'Noche', rol:'Chofer'},
+  {fecha:'2026-09-12', turno:'Noche', rol:'Chofer'},
+  {fecha:'2026-09-15', turno:'Mañana', rol:'Chofer'},
+  {fecha:'2026-09-19', turno:'Mañana', rol:'Chofer'},
   {fecha:'2026-09-18', turno:'Noche', rol:'Dotación'}
 ];
 
@@ -1325,6 +1383,19 @@ async function importarSeptiembre(){
   }
 }
 document.getElementById('btnImportSept').addEventListener('click', importarSeptiembre);
+
+// ---------- Tema claro / oscuro ----------
+function applyTheme(){
+  const theme = localStorage.getItem('bvc_guardias_theme') || 'dark';
+  document.body.classList.toggle('light-mode', theme === 'light');
+  document.getElementById('btnTheme').textContent = theme === 'light' ? '🌙 Fondo oscuro' : '☀️ Fondo claro';
+}
+document.getElementById('btnTheme').addEventListener('click', ()=>{
+  const current = localStorage.getItem('bvc_guardias_theme') || 'dark';
+  localStorage.setItem('bvc_guardias_theme', current === 'light' ? 'dark' : 'light');
+  applyTheme();
+});
+applyTheme();
 
 // ---------- sesión ----------
 session = loadSessionFromStorage();
