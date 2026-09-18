@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cronograma · Encargado de semana</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F7F6F2; --surface: #FFFFFF; --surface2: #F0EEE8;
+    --border: rgba(0,0,0,0.09); --border-md: rgba(0,0,0,0.15);
+    --text: #1A1917; --text-muted: #6B6960; --text-faint: #A09E96;
+    --green-bg: #EAF3DE; --green-text: #27500A;
+    --amber-bg: #FAEEDA; --amber-text: #633806;
+    --pink-bg: #FBEAF0; --pink-text: #72243E;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #141412; --surface: #1E1D1B; --surface2: #272623;
+      --border: rgba(255,255,255,0.08); --border-md: rgba(255,255,255,0.14);
+      --text: #F0EDE8; --text-muted: #9A9890; --text-faint: #66645E;
+      --green-bg: #173404; --green-text: #C0DD97;
+      --amber-bg: #412402; --amber-text: #FAC775;
+      --pink-bg: #4B1528; --pink-text: #F4C0D1;
+    }
+  }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; padding: 2rem 1rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1.5rem; margin-bottom: 1.75rem; flex-wrap: wrap; }
+  .page-title { font-size: 22px; font-weight: 600; letter-spacing: -0.3px; }
+  .page-sub { font-size: 13px; color: var(--text-muted); margin-top: 3px; }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; }
+  .stat { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius-sm); padding: 10px 16px; text-align: center; min-width: 70px; }
+  .stat-num { font-size: 20px; font-weight: 600; }
+  .stat-label { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+  .num-pend { color: #BA7517; } .num-conf { color: #3B6D11; } .num-cambio { color: #993556; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+  .controls label { font-size: 12px; color: var(--text-muted); }
+  select, input[type="text"] { font-family: inherit; font-size: 13px; padding: 6px 10px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-md); background: var(--surface); color: var(--text); outline: none; }
+  select:focus, input[type="text"]:focus { border-color: var(--text-muted); }
+  .btn { font-family: inherit; font-size: 12px; padding: 6px 12px; border-radius: var(--radius-sm); border: 0.5px solid var(--border-md); background: var(--surface); color: var(--text); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: background 0.15s; }
+  .btn:hover { background: var(--surface2); }
+  .btn svg { width: 14px; height: 14px; }
+  .btn-wa { background: #25D366; color: #fff; border-color: #25D366; font-weight: 500; }
+  .btn-wa:hover { background: #1ebe5d; border-color: #1ebe5d; }
+  .table-wrap { background: var(--surface); border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 560px; }
+  thead th { padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); background: var(--surface2); border-bottom: 0.5px solid var(--border); white-space: nowrap; }
+  tbody tr { border-bottom: 0.5px solid var(--border); transition: background 0.12s; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+  td { padding: 10px 14px; vertical-align: middle; }
+  .month-row td { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-faint); background: var(--surface2); padding: 7px 14px; border-bottom: 0.5px solid var(--border); }
+  .current-row { background: color-mix(in srgb, var(--amber-bg) 35%, transparent) !important; }
+  .tag { display: inline-flex; align-items: center; font-size: 12px; font-weight: 500; padding: 3px 9px; border-radius: 20px; white-space: nowrap; background: var(--green-bg); color: var(--green-text); }
+  .badge-hoy { font-size: 10px; font-weight: 600; background: var(--amber-bg); color: var(--amber-text); padding: 2px 6px; border-radius: 20px; margin-left: 6px; vertical-align: middle; }
+  .status-sel { font-size: 12px; font-weight: 500; padding: 4px 22px 4px 8px; border-radius: 20px; border: none; cursor: pointer; outline: none; -webkit-appearance: none; appearance: none; width: 100%; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23999'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 8px center; }
+  .sel-pend { background: var(--amber-bg); color: var(--amber-text); }
+  .sel-conf { background: var(--green-bg); color: var(--green-text); }
+  .sel-cambio { background: var(--pink-bg); color: var(--pink-text); }
+  .obs-in { font-size: 12px; padding: 4px 8px; border-radius: var(--radius-sm); border: 0.5px solid var(--border); background: transparent; color: var(--text); width: 100%; min-width: 120px; }
+  .obs-in:focus { border-color: var(--border-md); outline: none; background: var(--surface); }
+  .obs-in::placeholder { color: var(--text-faint); }
+  .sent-badge { font-size: 10px; color: var(--text-faint); white-space: nowrap; margin-top: 3px; display: flex; align-items: center; gap: 3px; }
+  .sent-badge.active { color: var(--green-text); }
+  .dates { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .sem-num { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+  .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; background: var(--surface); border: 0.5px solid var(--border-md); border-radius: var(--radius-sm); padding: 10px 16px; font-size: 13px; color: var(--text); box-shadow: 0 4px 16px rgba(0,0,0,0.12); opacity: 0; transform: translateY(6px); transition: opacity 0.2s, transform 0.2s; pointer-events: none; z-index: 999; }
+  .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="page-header">
+    <div>
+      <div class="page-title">BVC 30</div>
+      <div class="page-sub">Encargado de semana · Mayo – Diciembre 2026 · 31 semanas</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-num" id="cnt-total">31</div><div class="stat-label">Total</div></div>
+      <div class="stat"><div class="stat-num num-pend" id="cnt-pend">0</div><div class="stat-label">Pendientes</div></div>
+      <div class="stat"><div class="stat-num num-conf" id="cnt-conf">0</div><div class="stat-label">Confirmadas</div></div>
+      <div class="stat"><div class="stat-num num-cambio" id="cnt-cambio">0</div><div class="stat-label">Cambios</div></div>
+    </div>
+  </div>
+  <div class="controls">
+    <label>Filtrar:</label>
+    <select id="f-status" onchange="render()">
+      <option value="">Todos los estados</option>
+      <option value="Pendiente">Pendiente</option>
+      <option value="Confirmado">Confirmado</option>
+      <option value="Cambio solicitado">Cambio solicitado</option>
+    </select>
+    <select id="f-person" onchange="render()">
+      <option value="">Todas las personas</option>
+    </select>
+    <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer">
+      <input type="checkbox" id="f-futuro" checked onchange="render()" style="cursor:pointer;accent-color:var(--amber-text)">
+      Solo próximas
+    </label>
+    <button class="btn" onclick="exportCSV()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+      Exportar CSV
+    </button>
+    <button class="btn" onclick="resetData()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      Reiniciar
+    </button>
+    <button class="btn btn-wa" onclick="sendWA()">
+      <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.115.549 4.103 1.508 5.83L0 24l6.335-1.48A11.934 11.934 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.8 9.8 0 0 1-5.006-1.371l-.36-.214-3.72.868.936-3.618-.235-.372A9.795 9.795 0 0 1 2.182 12C2.182 6.57 6.57 2.182 12 2.182c5.43 0 9.818 4.388 9.818 9.818 0 5.43-4.388 9.818-9.818 9.818z"/></svg>
+      Enviar aviso semana siguiente
+    </button>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:46px">Sem.</th>
+          <th style="width:110px">Período</th>
+          <th>Encargado</th>
+          <th style="width:160px">Estado</th>
+          <th>Observaciones</th>
+          <th style="width:110px">Aviso WA</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const BASE = [
+  {sem:1,  d:'2026-05-30', h:'2026-06-06',  e:'Lopez Maxi',       mes:'Mayo 2026',       st:'Pendiente', ob:'', sent:null},
+  {sem:2,  d:'2026-06-06', h:'2026-06-13',  e:'Ferrer Juan',      mes:'Junio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:3,  d:'2026-06-13', h:'2026-06-20',  e:'Lopez Matias',     mes:'Junio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:4,  d:'2026-06-20', h:'2026-06-27',  e:'Roldan Nicolas',   mes:'Junio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:5,  d:'2026-06-27', h:'2026-07-04',  e:'Benigni Jonathan', mes:'Junio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:6,  d:'2026-07-04', h:'2026-07-11',  e:'Matrello Nicolas', mes:'Julio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:7,  d:'2026-07-11', h:'2026-07-18',  e:'Antonio Agustina', mes:'Julio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:8,  d:'2026-07-18', h:'2026-07-25',  e:'Pablo Cordovero',  mes:'Julio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:9,  d:'2026-07-25', h:'2026-08-01',  e:'Perez Loaysa F.',  mes:'Julio 2026',      st:'Pendiente', ob:'', sent:null},
+  {sem:10, d:'2026-08-01', h:'2026-08-08',  e:'Giacobino S.',     mes:'Agosto 2026',     st:'Pendiente', ob:'', sent:null},
+  {sem:11, d:'2026-08-08', h:'2026-08-15',  e:'Lopez Maxi',       mes:'Agosto 2026',     st:'Pendiente', ob:'', sent:null},
+  {sem:12, d:'2026-08-15', h:'2026-08-22',  e:'Ferrer Juan',      mes:'Agosto 2026',     st:'Pendiente', ob:'', sent:null},
+  {sem:13, d:'2026-08-22', h:'2026-08-29',  e:'Lopez Matias',     mes:'Agosto 2026',     st:'Pendiente', ob:'', sent:null},
+  {sem:14, d:'2026-08-29', h:'2026-09-05',  e:'Roldan Nicolas',   mes:'Agosto 2026',     st:'Pendiente', ob:'', sent:null},
+  {sem:15, d:'2026-09-05', h:'2026-09-12',  e:'Benigni Jonathan', mes:'Septiembre 2026', st:'Pendiente', ob:'', sent:null},
+  {sem:16, d:'2026-09-12', h:'2026-09-19',  e:'Matrello Nicolas', mes:'Septiembre 2026', st:'Pendiente', ob:'', sent:null},
+  {sem:17, d:'2026-09-19', h:'2026-09-26',  e:'Antonio Agustina', mes:'Septiembre 2026', st:'Pendiente', ob:'', sent:null},
+  {sem:18, d:'2026-09-26', h:'2026-10-03',  e:'Pablo Cordovero',  mes:'Septiembre 2026', st:'Pendiente', ob:'', sent:null},
+  {sem:19, d:'2026-10-03', h:'2026-10-10',  e:'Perez Loaysa F.',  mes:'Octubre 2026',    st:'Pendiente', ob:'', sent:null},
+  {sem:20, d:'2026-10-10', h:'2026-10-17',  e:'Giacobino S.',     mes:'Octubre 2026',    st:'Pendiente', ob:'', sent:null},
+  {sem:21, d:'2026-10-17', h:'2026-10-24',  e:'Lopez Maxi',       mes:'Octubre 2026',    st:'Pendiente', ob:'', sent:null},
+  {sem:22, d:'2026-10-24', h:'2026-10-31',  e:'Ferrer Juan',      mes:'Octubre 2026',    st:'Pendiente', ob:'', sent:null},
+  {sem:23, d:'2026-10-31', h:'2026-11-07',  e:'Lopez Matias',     mes:'Octubre 2026',    st:'Pendiente', ob:'', sent:null},
+  {sem:24, d:'2026-11-07', h:'2026-11-14',  e:'Roldan Nicolas',   mes:'Noviembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:25, d:'2026-11-14', h:'2026-11-21',  e:'Benigni Jonathan', mes:'Noviembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:26, d:'2026-11-21', h:'2026-11-28',  e:'Matrello Nicolas', mes:'Noviembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:27, d:'2026-11-28', h:'2026-12-05',  e:'Antonio Agustina', mes:'Noviembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:28, d:'2026-12-05', h:'2026-12-12',  e:'Pablo Cordovero',  mes:'Diciembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:29, d:'2026-12-12', h:'2026-12-19',  e:'Perez Loaysa F.',  mes:'Diciembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:30, d:'2026-12-19', h:'2026-12-26',  e:'Giacobino S.',     mes:'Diciembre 2026',  st:'Pendiente', ob:'', sent:null},
+  {sem:31, d:'2026-12-26', h:'2027-01-02',  e:'Lopez Maxi',       mes:'Diciembre 2026',  st:'Pendiente', ob:'', sent:null},
+];
+
+const fmt = iso => { const [y,m,d] = iso.split('-'); return `${d}/${m}`; };
+const isNow = (d, h) => { const t = new Date(); return t >= new Date(d) && t < new Date(h); };
+
+const SKEY = 'cron_enc_v2';
+let data = JSON.parse(JSON.stringify(BASE));
+
+function load() {
+  try { const s = localStorage.getItem(SKEY); if (s) { JSON.parse(s).forEach(sv => { const r = data.find(d => d.sem===sv.sem); if (r) { r.st=sv.st; r.ob=sv.ob; r.sent=sv.sent||null; } }); } } catch(e) {}
+}
+function save() {
+  try { localStorage.setItem(SKEY, JSON.stringify(data.map(d => ({sem:d.sem, st:d.st, ob:d.ob, sent:d.sent})))); } catch(e) {}
+}
+function toast(msg) {
+  const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 1800);
+}
+function updateStats() {
+  document.getElementById('cnt-pend').textContent = data.filter(d=>d.st==='Pendiente').length;
+  document.getElementById('cnt-conf').textContent = data.filter(d=>d.st==='Confirmado').length;
+  document.getElementById('cnt-cambio').textContent = data.filter(d=>d.st==='Cambio solicitado').length;
+}
+function stClass(st) {
+  if (st==='Confirmado') return 'sel-conf';
+  if (st==='Cambio solicitado') return 'sel-cambio';
+  return 'sel-pend';
+}
+function render() {
+  const fs = document.getElementById('f-status').value;
+  const fp = document.getElementById('f-person').value;
+  const futuro = document.getElementById('f-futuro').checked;
+  const today = new Date();
+  const rows = data.filter(r => {
+    if (fs && r.st !== fs) return false;
+    if (fp && r.e !== fp) return false;
+    if (futuro && new Date(r.h) <= today) return false;
+    return true;
+  });
+  const tb = document.getElementById('tbody');
+  tb.innerHTML = '';
+  let lastMes = '';
+  const noFilter = !fs && !fp && !futuro;
+  rows.forEach(r => {
+    if (noFilter && r.mes !== lastMes) {
+      lastMes = r.mes;
+      const mtr = document.createElement('tr'); mtr.className = 'month-row';
+      mtr.innerHTML = `<td colspan="6">${r.mes}</td>`; tb.appendChild(mtr);
+    }
+    const cur = isNow(r.d, r.h);
+    const tr = document.createElement('tr');
+    if (cur) tr.className = 'current-row';
+    const hoy = cur ? `<span class="badge-hoy">esta semana</span>` : '';
+    tr.innerHTML = `
+      <td><span class="sem-num">${r.sem}</span>${hoy}</td>
+      <td class="dates">${fmt(r.d)}<br>${fmt(r.h)}</td>
+      <td><span class="tag">${r.e}</span></td>
+      <td><select class="status-sel ${stClass(r.st)}" onchange="chStatus(${r.sem}, this)">
+        <option ${r.st==='Pendiente'?'selected':''}>Pendiente</option>
+        <option ${r.st==='Confirmado'?'selected':''}>Confirmado</option>
+        <option ${r.st==='Cambio solicitado'?'selected':''}>Cambio solicitado</option>
+      </select></td>
+      <td><input class="obs-in" type="text" value="${r.ob}" placeholder="Agregar nota…" onchange="chObs(${r.sem}, this.value)" /></td>
+      <td>
+        ${r.sent
+          ? `<div class="sent-badge active">✅ Enviado<br><span style="font-size:10px;color:var(--text-faint)">${r.sent}</span></div>`
+          : `<div class="sent-badge">— Sin enviar</div>`
+        }
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+  updateStats();
+}
+function chStatus(sem, sel) {
+  const r = data.find(d => d.sem===sem); if (!r) return;
+  r.st = sel.value; sel.className = `status-sel ${stClass(r.st)}`;
+  save(); updateStats(); toast('Estado guardado ✓');
+}
+function chObs(sem, val) {
+  const r = data.find(d => d.sem===sem); if (r) { r.ob=val; save(); toast('Nota guardada ✓'); }
+}
+function exportCSV() {
+  const lines = ['Semana,Desde,Hasta,Encargado,Estado,Observaciones'];
+  data.forEach(r => lines.push([r.sem, fmt(r.d), fmt(r.h), r.e, r.st, r.ob].map(v=>`"${v}"`).join(',')));
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([lines.join('\n')], {type:'text/csv;charset=utf-8;'}));
+  a.download = 'cronograma_encargado.csv'; a.click();
+}
+function resetData() {
+  if (!confirm('¿Reiniciar todos los estados y notas?')) return;
+  data = JSON.parse(JSON.stringify(BASE)); save(); render(); toast('Datos reiniciados');
+}
+function populatePeople() {
+  const all = [...new Set(data.map(r => r.e))].sort();
+  const sel = document.getElementById('f-person');
+  all.forEach(p => { const o = document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
+}
+load(); populatePeople(); render();
+
+function getNextWeek() {
+  const today = new Date();
+  // Find the next upcoming week (not yet started)
+  return data.find(r => new Date(r.d) > today) || null;
+}
+
+function fmtFull(iso) {
+  const [y, m, d] = iso.split('-');
+  const date = new Date(y, m - 1, d);
+  return date.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function sendWA() {
+  const next = getNextWeek();
+  if (!next) { toast('No hay semanas próximas'); return; }
+  const desde = fmtFull(next.d);
+  const hasta = fmtFull(next.h);
+  const msg =
+`🏋️ *ENCARGADO DE SEMANA*
+
+📅 A partir de las 00:00hs del día Sábado *${desde}* el encargado será:
+
+👤 *${next.e}*
+
+🔚 Hasta el día *${hasta}* a las 00:00hs.
+
+⚠️ Cambios de guardia del personal deberán arreglarlo con ellas solo con motivos de trabajo, salud o estudios.
+
+✅ Verificando el correcto cumplimiento del personal.
+
+Saludos 👋`;
+  const encoded = encodeURIComponent(msg);
+  window.open('https://wa.me/?text=' + encoded, '_blank');
+  // Mark as sent with current date/time
+  const now = new Date();
+  const ts = now.toLocaleDateString('es-AR', {day:'2-digit', month:'2-digit', year:'numeric'}) + ' ' +
+             now.toLocaleTimeString('es-AR', {hour:'2-digit', minute:'2-digit'});
+  next.sent = ts;
+  save();
+  render();
+  toast('Aviso enviado ✓ ' + ts);
+}
+</script>
+</body>
+</html>
