@@ -254,6 +254,25 @@
     body.print-week-mode .wk-turno-cell.ok { background: #eee !important; }
     body.print-week-mode .wk-turno-cell.alert { background: #fdd !important; box-shadow: none !important; }
   }
+
+  .month-list-print { display: none; }
+  @media print {
+    body.print-month-mode > *:not(#monthListPrint) { display: none !important; }
+    body.print-month-mode { background: #fff !important; }
+    body.print-month-mode #monthListPrint {
+      display: block !important; background: #fff; color: #111;
+      font-family: var(--fuente-cuerpo); padding: 0;
+    }
+    #monthListPrint h1 {
+      font-family: var(--fuente-titulo); font-size: 24px; letter-spacing: 1px;
+      border-bottom: 2px solid #111; padding-bottom: 8px; margin-bottom: 14px;
+    }
+    .ml-day { break-inside: avoid; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #ccc; }
+    .ml-day-title { font-family: var(--fuente-mono); font-weight: 600; font-size: 12.5px; margin-bottom: 4px; text-transform: uppercase; }
+    .ml-turno { font-size: 12px; margin: 2px 0 2px 10px; }
+    .ml-turno b { font-family: var(--fuente-mono); font-size: 10.5px; text-transform: uppercase; margin-right: 6px; }
+    .ml-empty { font-size: 11.5px; color: #777; font-style: italic; }
+  }
   @media (max-width: 720px) {
     .turno-cols { grid-template-columns: 1fr; }
     .day { min-height: auto; }
@@ -279,6 +298,7 @@
     <button class="btn-tool" id="btnWeek">📆 Ver por semana</button>
     <button class="btn-tool" id="btnMisGuardias">🗓 Mis guardias</button>
     <button class="btn-tool" id="btnPrint">🖨 Imprimir</button>
+    <button class="btn-tool" id="btnPrintMonthList">📄 Listado del mes (PDF)</button>
     <button class="btn-tool" id="btnTheme">☀️ Fondo claro</button>
     <button class="btn-tool danger" id="btnReset">🗑 Vaciar mes</button>
     <button class="btn-tool" id="btnImportSept">⬆ Importar Septiembre</button>
@@ -434,6 +454,11 @@
 </div>
 
 <datalist id="personnelList"></datalist>
+
+<div id="monthListPrint" class="month-list-print">
+  <h1 id="monthListTitle"></h1>
+  <div id="monthListBody"></div>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1284,6 +1309,44 @@ document.getElementById('detalleClose').addEventListener('click', ()=>{
 
 // ---------- Imprimir / vaciar mes (con clave de seguridad) ----------
 document.getElementById('btnPrint').addEventListener('click', ()=> window.print());
+
+// ---------- Listado del mes (impresión / PDF) ----------
+const MESES_NOMBRES = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DIAS_NOMBRES = ["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+function imprimirListadoMes(){
+  const daysInMonth = new Date(currentYear, currentMonth+1, 0).getDate();
+  document.getElementById('monthListTitle').textContent =
+    `Guardias — ${MESES_NOMBRES[currentMonth]} ${currentYear}`;
+
+  let html = '';
+  for(let d=1; d<=daysInMonth; d++){
+    const key = dateKey(currentYear, currentMonth, d);
+    const rec = state.assignments[key] || {};
+    const fecha = new Date(currentYear, currentMonth, d);
+    const nombreDia = DIAS_NOMBRES[fecha.getDay()];
+
+    const turnosHtml = TURNOS.map(t=>{
+      const list = rec[t.id] || [];
+      if(list.length === 0) return '';
+      const nombres = list.map(e=>`${e.name} (${roleInfo(e.role).label})`).join(', ');
+      return `<div class="ml-turno"><b>${t.label}:</b>${nombres}</div>`;
+    }).join('');
+
+    html += `<div class="ml-day">
+      <div class="ml-day-title">${nombreDia} ${d}/${pad(currentMonth+1)}/${currentYear}</div>
+      ${turnosHtml || '<div class="ml-empty">Sin guardias cargadas</div>'}
+    </div>`;
+  }
+
+  document.getElementById('monthListBody').innerHTML = html;
+  document.body.classList.add('print-month-mode');
+  window.print();
+}
+document.getElementById('btnPrintMonthList').addEventListener('click', imprimirListadoMes);
+window.addEventListener('afterprint', ()=>{
+  document.body.classList.remove('print-month-mode');
+});
 
 document.getElementById('btnReset').addEventListener('click', ()=>{
   document.getElementById('keyInput').value = '';
