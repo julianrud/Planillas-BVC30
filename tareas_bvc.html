@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#b3201a">
+<title>BVC · Registro de Tareas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0e0e0e; --panel:#171717; --panel2:#202020; --borde:#2f2f2f;
+  --txt:#f2f2f2; --txt2:#9b9b9b;
+  --rojo:#e0342b; --rojo-osc:#b3201a; --amarillo:#f5c518; --verde:#3fb950;
+  --azul:#58a6ff; --naranja:#f0883e; --gris:#7d7d7d;
+  --f-titulo:'Bebas Neue', sans-serif; --f-mono:'IBM Plex Mono', monospace; --f-body:'IBM Plex Sans', system-ui, sans-serif;
+  --radio:6px;
+}
+[data-theme="light"]{
+  --bg:#f3f1ec; --panel:#ffffff; --panel2:#efece6; --borde:#d8d3c9;
+  --txt:#171717; --txt2:#5e5e5e;
+  --amarillo:#b38600; --verde:#1f8a36; --azul:#1f6fd1; --naranja:#c4610f; --gris:#8a8a8a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--txt);font-family:var(--f-body);font-size:15px;-webkit-text-size-adjust:100%}
+body{min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.oculto{display:none!important}
+
+header{position:sticky;top:0;z-index:50;background:var(--rojo-osc);color:#fff;border-bottom:3px solid var(--amarillo)}
+.hbar{display:flex;align-items:center;gap:10px;padding:10px 14px;max-width:1100px;margin:0 auto}
+.marca{font-family:var(--f-titulo);font-size:26px;letter-spacing:1px;line-height:1}
+.marca small{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:1.5px;opacity:.85}
+.hbar .sp{flex:1}
+.usuario{font-family:var(--f-mono);font-size:11px;text-align:right;line-height:1.3;max-width:42vw;overflow:hidden}
+.usuario b{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{background:rgba(0,0,0,.25);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:var(--radio);height:34px;min-width:34px;padding:0 8px;font-family:var(--f-mono);font-size:12px}
+.conexion{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:10px;padding:0 14px 6px;max-width:1100px;margin:0 auto;opacity:.9}
+.dot{width:8px;height:8px;border-radius:50%;background:#bbb}
+.conexion.ok .dot{background:#5ee07a}
+.conexion.error .dot{background:var(--amarillo)}
+
+.tabs{position:sticky;top:0;z-index:40;background:var(--panel);border-bottom:1px solid var(--borde)}
+.tabs-in{display:flex;max-width:1100px;margin:0 auto;overflow-x:auto;scrollbar-width:none}
+.tabs-in::-webkit-scrollbar{display:none}
+.tab{flex:1;min-width:88px;background:none;border:none;border-bottom:3px solid transparent;padding:12px 8px;font-family:var(--f-mono);font-size:12px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--txt2);white-space:nowrap}
+.tab.activo{color:var(--txt);border-bottom-color:var(--rojo)}
+.tab .cnt{display:inline-block;background:var(--rojo);color:#fff;border-radius:10px;padding:0 6px;font-size:10px;margin-left:4px}
+
+main{max-width:1100px;margin:0 auto;padding:14px}
+h2.sec{font-family:var(--f-titulo);font-size:24px;letter-spacing:.8px;margin:6px 0 10px}
+.etq{font-family:var(--f-mono);font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--txt2);margin-bottom:6px;display:block}
+.nota{font-size:13px;color:var(--txt2);margin-bottom:12px;line-height:1.45}
+
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{width:100%;max-width:380px;background:var(--panel);border:1px solid var(--borde);border-top:4px solid var(--rojo);border-radius:var(--radio);padding:26px 22px}
+.login-card h1{font-family:var(--f-titulo);font-size:40px;letter-spacing:1px;line-height:.95}
+.login-card h1 span{color:var(--rojo)}
+.login-card p{color:var(--txt2);font-size:13px;margin:8px 0 20px}
+.campo{width:100%;background:var(--bg);border:1px solid var(--borde);border-radius:var(--radio);padding:12px;font-size:16px}
+.campo:focus{outline:2px solid var(--amarillo);outline-offset:-1px}
+textarea.campo{min-height:80px;resize:vertical}
+.error-msg{color:var(--rojo);font-size:13px;min-height:18px;margin-top:8px}
+.btn{border:none;border-radius:var(--radio);padding:12px 16px;font-family:var(--f-mono);font-weight:600;font-size:13px;letter-spacing:.5px;text-transform:uppercase}
+.btn.pri{background:var(--rojo);color:#fff}
+.btn.ok{background:var(--verde);color:#fff}
+.btn.sec{background:var(--panel2);border:1px solid var(--borde)}
+.btn.peligro{background:none;border:1px solid var(--rojo);color:var(--rojo)}
+.btn.full{width:100%}
+.btn.chico{padding:8px 12px;font-size:11px}
+.btn:disabled{opacity:.5}
+.login-foot{margin-top:18px;font-family:var(--f-mono);font-size:10px;color:var(--txt2);text-align:center}
+
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:14px}
+@media(min-width:720px){.kpis{grid-template-columns:repeat(5,1fr)}}
+.kpis.tres{grid-template-columns:repeat(3,1fr)}
+.kpi{background:var(--panel);border:1px solid var(--borde);border-left:4px solid var(--gris);border-radius:var(--radio);padding:10px 12px}
+.kpi .v{font-family:var(--f-titulo);font-size:30px;line-height:1}
+.kpi .l{font-family:var(--f-mono);font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--txt2);margin-top:4px}
+.kpi.rojo{border-left-color:var(--rojo)} .kpi.rojo .v{color:var(--rojo)}
+.kpi.amarillo{border-left-color:var(--amarillo)}
+.kpi.verde{border-left-color:var(--verde)}
+.kpi.azul{border-left-color:var(--azul)}
+
+.seg{display:flex;background:var(--panel2);border:1px solid var(--borde);border-radius:var(--radio);padding:3px;margin-bottom:12px}
+.seg button{flex:1;background:none;border:none;border-radius:4px;padding:9px 6px;font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--txt2)}
+.seg button.activo{background:var(--panel);color:var(--txt);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.filtros{display:grid;grid-template-columns:1fr;gap:8px;margin-bottom:12px}
+@media(min-width:720px){.filtros{grid-template-columns:2fr 1fr 1fr}}
+.filtros .campo{padding:10px;font-size:15px}
+
+.lista{display:grid;grid-template-columns:1fr;gap:10px}
+@media(min-width:720px){.lista{grid-template-columns:1fr 1fr}}
+.tarea{background:var(--panel);border:1px solid var(--borde);border-left:4px solid var(--gris);border-radius:var(--radio);padding:12px 14px;cursor:pointer;transition:transform .1s}
+.tarea:active{transform:scale(.99)}
+.tarea.prio-alta{border-left-color:var(--rojo)}
+.tarea.prio-media{border-left-color:var(--amarillo)}
+.tarea.prio-baja{border-left-color:var(--gris)}
+.t-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
+.tarea h3{font-size:16px;font-weight:600;line-height:1.3;margin-bottom:4px;word-break:break-word}
+.t-esc{font-family:var(--f-mono);font-size:12px;color:var(--amarillo);margin-bottom:4px}
+.t-fechas{font-family:var(--f-mono);font-size:11px;color:var(--txt2);margin-bottom:8px}
+.barra{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
+.barra span{display:block;height:100%}
+.barra .amarillo{background:var(--amarillo)} .barra .naranja{background:var(--naranja)} .barra .rojo{background:var(--rojo)} .barra .verde{background:var(--verde)}
+.t-rest{font-family:var(--f-mono);font-size:12px;font-weight:600;margin-top:6px}
+.badge{display:inline-block;font-family:var(--f-mono);font-size:10px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;padding:3px 7px;border-radius:3px;border:1px solid currentColor}
+.amarillo{color:var(--amarillo)} .azul{color:var(--azul)} .rojo{color:var(--rojo)} .verde{color:var(--verde)} .gris{color:var(--gris)} .naranja{color:var(--naranja)}
+.prio{font-family:var(--f-mono);font-size:10px;color:var(--txt2);text-transform:uppercase;letter-spacing:.6px}
+.vacio{text-align:center;color:var(--txt2);padding:36px 12px;border:1px dashed var(--borde);border-radius:var(--radio);font-size:14px;line-height:1.5}
+.mis-esc{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+
+.graficos{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:14px}
+@media(min-width:860px){.graficos{grid-template-columns:1fr 1fr}}
+.card{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);padding:14px}
+.card h3{font-family:var(--f-titulo);font-size:20px;letter-spacing:.6px;margin-bottom:2px}
+.card .sub{font-size:12px;color:var(--txt2);margin-bottom:10px}
+.lienzo{position:relative;height:240px}
+.periodo{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.periodo select{flex:1;max-width:240px}
+
+.form{display:grid;gap:14px;max-width:720px}
+.fila2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:420px){.fila2{grid-template-columns:1fr}}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{background:var(--panel2);border:1px solid var(--borde);border-radius:16px;padding:7px 12px;font-family:var(--f-mono);font-size:12px}
+.chip.activo{background:var(--rojo);border-color:var(--rojo);color:#fff}
+.chip.sel{background:var(--amarillo);border-color:var(--amarillo);color:#111;font-weight:600}
+.esc-opciones{display:grid;grid-template-columns:1fr;gap:8px}
+@media(min-width:600px){.esc-opciones{grid-template-columns:1fr 1fr}}
+.esc-op{display:flex;align-items:flex-start;gap:10px;background:var(--bg);border:1px solid var(--borde);border-radius:var(--radio);padding:11px 12px;cursor:pointer}
+.esc-op.sel{border-color:var(--amarillo);box-shadow:inset 0 0 0 1px var(--amarillo)}
+.esc-op input{width:20px;height:20px;accent-color:var(--rojo);flex-shrink:0;margin-top:1px}
+.esc-op b{display:block;font-size:14px}
+.esc-op small{display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt2);margin-top:2px}
+.esc-op small.sinjefe{color:var(--rojo)}
+.checklist{max-height:280px;overflow-y:auto;border:1px solid var(--borde);border-radius:var(--radio);background:var(--bg)}
+.checklist label{display:flex;align-items:center;gap:10px;padding:11px 12px;border-bottom:1px solid var(--borde);cursor:pointer}
+.checklist label:last-child{border-bottom:none}
+.checklist input{width:20px;height:20px;accent-color:var(--rojo);flex-shrink:0}
+.checklist .g{font-family:var(--f-mono);font-size:10px;color:var(--txt2);display:block}
+.form-acc{display:flex;gap:10px;flex-wrap:wrap}
+.form-acc .btn{flex:1}
+
+.escuadra{background:var(--panel);border:1px solid var(--borde);border-top:3px solid var(--rojo);border-radius:var(--radio);padding:12px 14px}
+.escuadra .n{font-family:var(--f-titulo);font-size:22px;letter-spacing:.5px;line-height:1.1}
+.escuadra .d{font-size:12px;color:var(--txt2);margin:2px 0 8px}
+.escuadra .j{font-family:var(--f-mono);font-size:12px;margin-bottom:8px}
+.mini{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;margin-bottom:10px}
+.mini div{background:var(--panel2);border-radius:4px;padding:6px 2px}
+.mini b{display:block;font-family:var(--f-titulo);font-size:20px;line-height:1}
+.mini span{font-family:var(--f-mono);font-size:9px;color:var(--txt2);text-transform:uppercase}
+.esc-acc{display:flex;gap:8px}
+.esc-acc .btn{flex:1}
+.barra-sup{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:12px}
+
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center}
+@media(min-width:720px){.modal{align-items:center}}
+.modal-box{background:var(--panel);width:100%;max-width:560px;max-height:92vh;overflow-y:auto;border-radius:12px 12px 0 0;border-top:4px solid var(--rojo);padding:18px 16px calc(18px + env(safe-area-inset-bottom))}
+@media(min-width:720px){.modal-box{border-radius:var(--radio)}}
+.modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:10px}
+.modal-head h3{font-size:19px;line-height:1.3;word-break:break-word}
+.cerrar{background:var(--panel2);border:1px solid var(--borde);border-radius:50%;width:34px;height:34px;flex-shrink:0;font-size:18px;line-height:1}
+.det-desc{white-space:pre-wrap;font-size:14px;line-height:1.5;background:var(--panel2);border-radius:var(--radio);padding:10px 12px;margin:10px 0}
+.det-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.det-grid div{background:var(--panel2);border-radius:var(--radio);padding:8px 10px}
+.det-grid b{display:block;font-size:13px;margin-top:2px}
+.hist{border-left:2px solid var(--borde);margin:6px 0 14px 4px;padding-left:12px}
+.hist p{font-size:13px;margin-bottom:8px}
+.hist small{display:block;font-family:var(--f-mono);font-size:10px;color:var(--txt2)}
+.acciones{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.acciones .ancho{grid-column:1/-1}
+.aviso{font-size:12px;color:var(--txt2);background:var(--panel2);border-radius:var(--radio);padding:9px 11px;grid-column:1/-1}
+.mform{display:grid;gap:12px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--txt);color:var(--bg);padding:11px 18px;border-radius:var(--radio);font-size:14px;z-index:200;transition:transform .25s;max-width:90vw;text-align:center}
+.toast.ver{transform:translateX(-50%) translateY(0)}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<section id="login">
+  <div class="login-card">
+    <h1>Registro de<br><span>Tareas</span></h1>
+    <p>Bomberos Voluntarios de Cañuelas. Ingresá con tu número de legajo para ver las tareas de tu escuadra.</p>
+    <label class="etq" for="loginInput">Legajo</label>
+    <input id="loginInput" class="campo" type="text" autocomplete="off" autocapitalize="characters" placeholder="Ej: 244" enterkeyhint="go">
+    <div class="error-msg" id="loginError"></div>
+    <button class="btn pri full" id="btnIngresar" disabled>Cargando padrón…</button>
+    <div class="login-foot">Jefatura: ingresá con la clave de administración<br><span id="loginConexion">Conectando…</span></div>
+  </div>
+</section>
+
+<!-- ================= APP ================= -->
+<div id="app" class="oculto">
+  <header>
+    <div class="hbar">
+      <div class="marca">BVC · TAREAS<small>BOMBEROS VOLUNTARIOS CAÑUELAS</small></div>
+      <div class="sp"></div>
+      <div class="usuario"><b id="hNombre"></b><span id="hRol"></span></div>
+      <button class="icon-btn" id="btnTema" title="Cambiar tema">◐</button>
+      <button class="icon-btn" id="btnSalir">Salir</button>
+    </div>
+    <div class="conexion" id="conexion"><span class="dot"></span><span id="conexionTxt">Conectando…</span></div>
+  </header>
+
+  <!-- ===== Vista personal ===== -->
+  <div id="vistaPersonal" class="oculto">
+    <main>
+      <h2 class="sec">Tareas de mi escuadra</h2>
+      <div class="mis-esc" id="misEscuadras"></div>
+      <div class="kpis tres">
+        <div class="kpi amarillo"><div class="v" id="pActivas">0</div><div class="l">Activas</div></div>
+        <div class="kpi rojo"><div class="v" id="pVencidas">0</div><div class="l">Vencidas</div></div>
+        <div class="kpi verde"><div class="v" id="pCompletadas">0</div><div class="l">Completadas</div></div>
+      </div>
+      <div class="seg" id="segPersonal">
+        <button data-f="activas" class="activo">Activas</button>
+        <button data-f="completadas">Completadas</button>
+      </div>
+      <div class="lista" id="listaPersonal"></div>
+    </main>
+  </div>
+
+  <!-- ===== Vista jefatura ===== -->
+  <div id="vistaJefatura" class="oculto">
+    <nav class="tabs"><div class="tabs-in" id="tabsJ">
+      <button class="tab activo" data-tab="tablero">Tablero</button>
+      <button class="tab" data-tab="tareas">Tareas <span class="cnt oculto" id="cntVencidas"></span></button>
+      <button class="tab" data-tab="nueva">+ Asignar</button>
+      <button class="tab" data-tab="escuadras">Escuadras</button>
+    </div></nav>
+    <main>
+      <!-- Tablero -->
+      <section id="tab-tablero">
+        <div class="periodo">
+          <span class="etq" style="margin:0">Período</span>
+          <select class="campo" id="selPeriodo" style="padding:8px 10px;font-size:14px">
+            <option value="30">Últimos 30 días</option>
+            <option value="90">Últimos 90 días</option>
+            <option value="anio">Este año</option>
+            <option value="todo">Todo el historial</option>
+          </select>
+        </div>
+        <div class="kpis">
+          <div class="kpi amarillo"><div class="v" id="kActivas">0</div><div class="l">Activas</div></div>
+          <div class="kpi rojo"><div class="v" id="kVencidas">0</div><div class="l">Vencidas</div></div>
+          <div class="kpi verde"><div class="v" id="kCompletadas">0</div><div class="l">Completadas</div></div>
+          <div class="kpi azul"><div class="v" id="kResp">–</div><div class="l">T. resp. promedio</div></div>
+          <div class="kpi"><div class="v" id="kATiempo">–</div><div class="l">Cumplidas a tiempo</div></div>
+        </div>
+        <div class="graficos">
+          <div class="card"><h3>Estado actual</h3><div class="sub">Tareas activas por estado + completadas del período</div><div class="lienzo"><canvas id="chEstado"></canvas></div></div>
+          <div class="card"><h3>Pendientes por escuadra</h3><div class="sub">Tareas abiertas: en plazo y vencidas</div><div class="lienzo" id="wrapPend"><canvas id="chPend"></canvas></div></div>
+          <div class="card"><h3>Tiempo de respuesta por escuadra</h3><div class="sub">Promedio desde el inicio hasta la finalización (período). Verde: todas a tiempo · naranja: la mayoría · rojo: menos de la mitad</div><div class="lienzo" id="wrapResp"><canvas id="chResp"></canvas></div></div>
+          <div class="card"><h3>Completadas por semana</h3><div class="sub">Últimas 8 semanas — a tiempo vs. fuera de plazo</div><div class="lienzo"><canvas id="chSemana"></canvas></div></div>
+        </div>
+        <h2 class="sec">Vencidas sin resolver</h2>
+        <div class="lista" id="listaVencidas"></div>
+      </section>
+
+      <!-- Tareas -->
+      <section id="tab-tareas" class="oculto">
+        <div class="filtros">
+          <input class="campo" id="fTexto" type="search" placeholder="Buscar por título, descripción o escuadra…">
+          <select class="campo" id="fEstado">
+            <option value="activas">Activas (todas)</option>
+            <option value="vencida">Vencidas</option>
+            <option value="pendiente">Pendientes</option>
+            <option value="en_curso">En curso</option>
+            <option value="programada">Programadas</option>
+            <option value="completada">Completadas</option>
+            <option value="todas">Todas</option>
+          </select>
+          <select class="campo" id="fEscuadra"><option value="">Todas las escuadras</option></select>
+        </div>
+        <div class="etq" id="fResultado"></div>
+        <div class="lista" id="listaTareas"></div>
+      </section>
+
+      <!-- Nueva / editar -->
+      <section id="tab-nueva" class="oculto">
+        <h2 class="sec" id="formTitulo">Asignar tarea</h2>
+        <div class="form">
+          <div>
+            <label class="etq" for="nTitulo">Título *</label>
+            <input class="campo" id="nTitulo" maxlength="120" placeholder="Ej: Revisar equipos autónomos de la unidad 33">
+          </div>
+          <div>
+            <label class="etq" for="nDesc">Descripción / instrucciones</label>
+            <textarea class="campo" id="nDesc" placeholder="Detalle de lo que hay que hacer, materiales, criterios de cumplimiento…"></textarea>
+          </div>
+          <div>
+            <span class="etq">Prioridad</span>
+            <div class="chips" id="nPrio">
+              <button class="chip" data-p="baja">Baja</button>
+              <button class="chip activo" data-p="media">Media</button>
+              <button class="chip" data-p="alta">Alta</button>
+            </div>
+          </div>
+          <div>
+            <span class="etq">Asignar a escuadra * <span id="nSelCount" style="color:var(--amarillo)"></span></span>
+            <div class="esc-opciones" id="nEscuadras"></div>
+          </div>
+          <div class="fila2">
+            <div>
+              <label class="etq" for="nInicio">Fecha de inicio *</label>
+              <input class="campo" id="nInicio" type="datetime-local">
+            </div>
+            <div>
+              <label class="etq" for="nLimite">Límite de finalización *</label>
+              <input class="campo" id="nLimite" type="datetime-local">
+            </div>
+          </div>
+          <div>
+            <span class="etq">Plazo rápido</span>
+            <div class="chips" id="nPlazos">
+              <button class="chip" data-h="24">24 h</button>
+              <button class="chip" data-h="72">3 días</button>
+              <button class="chip" data-h="168">1 semana</button>
+              <button class="chip" data-h="360">15 días</button>
+              <button class="chip" data-h="720">30 días</button>
+            </div>
+          </div>
+          <div class="form-acc">
+            <button class="btn sec oculto" id="btnCancelarEd">Cancelar edición</button>
+            <button class="btn pri" id="btnGuardar">Asignar tarea</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Escuadras -->
+      <section id="tab-escuadras" class="oculto">
+        <div class="barra-sup">
+          <div class="nota" style="margin:0" id="escResumen"></div>
+          <button class="btn pri chico" id="btnNuevaEsc">+ Nueva escuadra</button>
+        </div>
+        <div class="lista" id="listaEscuadras"></div>
+        <h2 class="sec" style="margin-top:18px">Personal sin escuadra</h2>
+        <div class="nota" id="sinEscuadra"></div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<!-- ================= MODAL DETALLE ================= -->
+<div class="modal oculto" id="modalDetalle">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="detTitulo"></h3><button class="cerrar" data-cerrar>×</button></div>
+    <div id="detBody"></div>
+  </div>
+</div>
+
+<!-- ================= MODAL ESCUADRA ================= -->
+<div class="modal oculto" id="modalEsc">
+  <div class="modal-box">
+    <div class="modal-head"><h3 id="escTitulo">Escuadra</h3><button class="cerrar" data-cerrar>×</button></div>
+    <div class="mform">
+      <div>
+        <label class="etq" for="eNombre">Nombre *</label>
+        <input class="campo" id="eNombre" maxlength="60" placeholder="Ej: Automotores">
+      </div>
+      <div>
+        <label class="etq" for="eDesc">Qué abarca</label>
+        <input class="campo" id="eDesc" maxlength="140" placeholder="Ej: Mantenimiento y control de móviles">
+      </div>
+      <div>
+        <label class="etq" for="eJefe">Jefe de escuadra (cierra las tareas)</label>
+        <select class="campo" id="eJefe"></select>
+      </div>
+      <div>
+        <span class="etq">Integrantes <span id="eCount" style="color:var(--amarillo)"></span></span>
+        <input class="campo" id="eBuscar" type="search" placeholder="Buscar persona…" style="margin-bottom:6px">
+        <div class="checklist" id="eChecklist"></div>
+      </div>
+      <div class="acciones">
+        <button class="btn pri ancho" id="btnGuardarEsc">Guardar escuadra</button>
+        <button class="btn peligro ancho oculto" id="btnBorrarEsc">Eliminar escuadra</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+//  BVC · Registro de Tareas por escuadra — Firebase compat (bvc-despacho)
+// ============================================================
+const firebaseConfig = {
+  apiKey: "AIzaSyA_X-RBYpJUJWz7vFJz4-i8lX1lNXov6bM",
+  authDomain: "bvc-despacho.firebaseapp.com",
+  projectId: "bvc-despacho",
+  appId: "1:112751546055:web:52f292f3ce1ac1a838b8e2"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const CLAVE_JEFATURA = "BVC2026";
+const LS_SESION = "bvc_tareas_sesion";
+const LS_TEMA = "bvc_tema";
+
+// Estructura sugerida (se crea la primera vez; jefatura la edita desde la pestaña Escuadras)
+const SEED_ESCUADRAS = [
+  {id:"automotores",  nombre:"Automotores",               desc:"Mantenimiento, control y documentación de móviles; choferes"},
+  {id:"intendencia",  nombre:"Intendencia y Logística",   desc:"Edificio, EPP, uniformes, stock, combustible y equipamiento"},
+  {id:"comunicaciones", nombre:"Comunicaciones",          desc:"Central de alarma, radios, handies y enlaces"},
+  {id:"capacitacion", nombre:"Capacitación",              desc:"Instrucción, prácticas, cursos y formación de aspirantes"},
+  {id:"rescate",      nombre:"Rescate",                   desc:"Rescate vehicular y técnico, herramientas hidráulicas"},
+  {id:"sanidad",      nombre:"Primeros Auxilios",         desc:"Botiquines, DEA, insumos y capacitación en primeros auxilios"},
+  {id:"matpel",       nombre:"Materiales Peligrosos",     desc:"Equipamiento y procedimientos mat-pel"},
+  {id:"forestal",     nombre:"Incendios Forestales",      desc:"Equipos y herramientas forestales, temporada de incendios"},
+  {id:"ayudantia",    nombre:"Ayudantía y Personal",      desc:"Partes, legajos, asistencia y documentación del cuerpo activo"}
+].map(e => Object.assign({jefe:null, integrantes:[]}, e));
+
+const ESTADOS = {
+  pendiente:  {l:"Pendiente",  c:"amarillo"},
+  en_curso:   {l:"En curso",   c:"azul"},
+  programada: {l:"Programada", c:"gris"},
+  vencida:    {l:"Vencida",    c:"rojo"},
+  completada: {l:"Completada", c:"verde"}
+};
+const PRIO = {alta:"▲ Prioridad alta", media:"● Prioridad media", baja:"▼ Prioridad baja"};
+
+let PADRON = [];
+let ESCUADRAS = [];
+let SESION = null;
+let TAREAS_TODAS = [];
+let TAREAS = [];
+let unsubT = null, unsubE = null;
+let filtroPersonal = "activas";
+let tabJ = "tablero";
+let charts = {};
+let detalleId = null;
+let editandoId = null;
+let escSel = new Set();
+let prioSel = "media";
+let escEditando = null;
+let escIntegrantes = new Set();
+
+// ---------- Utilidades ----------
+const $ = id => document.getElementById(id);
+function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; } }
+function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
+function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
+function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function lpNum(v){
+  if(v === null || v === undefined || v === "") return null;
+  const s = String(v).trim();
+  const parte = s.includes("/") ? s.split("/").pop() : s;
+  if(!/^\d+$/.test(parte)) return null;
+  return parseInt(parte, 10);
+}
+function lpTexto(v){ const n = lpNum(v); return n == null ? "s/legajo" : "30/" + String(n).padStart(4,"0"); }
+function toast(msg){
+  const t = $("toast"); t.textContent = msg; t.classList.add("ver");
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("ver"), 2800);
+}
+function fNum(x){ return (Math.round(x*10)/10).toString().replace(".", ","); }
+function fDur(ms){
+  ms = Math.max(0, ms);
+  const min = Math.round(ms/60000);
+  if(min < 60) return min + " min";
+  const h = ms/3600000;
+  if(h < 48) return fNum(h) + " h";
+  return fNum(ms/86400000) + " días";
+}
+function fFecha(ms){
+  if(!ms) return "–";
+  return new Date(ms).toLocaleString("es-AR", {day:"2-digit", month:"2-digit", year:"2-digit", hour:"2-digit", minute:"2-digit"});
+}
+function toLocalInput(ms){
+  const d = new Date(ms); const p = n => String(n).padStart(2,"0");
+  return d.getFullYear()+"-"+p(d.getMonth()+1)+"-"+p(d.getDate())+"T"+p(d.getHours())+":"+p(d.getMinutes());
+}
+function fromLocalInput(s){ return s ? new Date(s).getTime() : NaN; }
+function hist(txt){ return {ms: Date.now(), quien: SESION ? SESION.name : "", txt: txt}; }
+function gradoDe(nombre){ const p = PADRON.find(x => x.name === nombre); return p ? p.grado : ""; }
+
+function setConexion(estado, texto){
+  const el = $("conexion"); el.classList.remove("ok","error");
+  if(estado) el.classList.add(estado);
+  $("conexionTxt").textContent = texto;
+  $("loginConexion").textContent = texto;
+}
+
+// ---------- Escuadras: helpers ----------
+function escuadraPorId(id){ return ESCUADRAS.find(e => e.id === id) || null; }
+function nombreEsc(t){ const e = escuadraPorId(t.escuadraId); return e ? e.nombre : (t.escuadraNombre || "Escuadra eliminada"); }
+function jefeDe(t){ const e = escuadraPorId(t.escuadraId); return e ? e.jefe : null; }
+function misEscuadras(){
+  if(!SESION || SESION.rol !== "personal") return [];
+  return ESCUADRAS.filter(e => e.jefe === SESION.name || (e.integrantes || []).includes(SESION.name));
+}
+function puedeCerrar(t){
+  if(!SESION) return false;
+  if(SESION.rol === "jefatura") return true;
+  return jefeDe(t) === SESION.name;
+}
+
+// ---------- Tema ----------
+function aplicarTema(t){
+  document.documentElement.setAttribute("data-theme", t);
+  lsSet(LS_TEMA, t);
+  if(window.Chart){
+    const cs = getComputedStyle(document.documentElement);
+    Chart.defaults.color = cs.getPropertyValue("--txt2").trim();
+    Chart.defaults.borderColor = cs.getPropertyValue("--borde").trim();
+  }
+}
+if(window.Chart){
+  Chart.defaults.font.family = "'IBM Plex Mono', monospace";
+  Chart.defaults.font.size = 11;
+  Chart.defaults.animation = false;
+}
+aplicarTema(lsGet(LS_TEMA) || "dark");
+$("btnTema").addEventListener("click", () => {
+  aplicarTema(document.documentElement.getAttribute("data-theme") === "light" ? "dark" : "light");
+  render();
+});
+
+// ---------- Estado de una tarea ----------
+function estadoDe(t, now){
+  now = now || Date.now();
+  if(t.estado === "completada") return "completada";
+  if(t.limiteMs < now) return "vencida";
+  if(t.inicioMs > now) return "programada";
+  return t.estado === "en_curso" ? "en_curso" : "pendiente";
+}
+function restante(t, now){
+  const e = estadoDe(t, now);
+  if(e === "completada") return (t.completadaMs <= t.limiteMs ? "✓ Completada a tiempo" : "✓ Completada fuera de plazo") + " · resp. " + fDur(t.completadaMs - t.inicioMs);
+  if(e === "programada") return "Comienza en " + fDur(t.inicioMs - now);
+  if(e === "vencida") return "Vencida hace " + fDur(now - t.limiteMs);
+  return "Vence en " + fDur(t.limiteMs - now);
+}
+
+// ---------- Carga inicial ----------
+async function cargarPadron(){
+  setConexion("", "Conectando…");
+  try{
+    const snap = await db.collection("meta").doc("personal").get();
+    const list = snap.exists ? (snap.data().list || []) : [];
+    PADRON = list.map(p => {
+      if(typeof p === "string") return {name:p, lp:null, grado:""};
+      return {
+        name: p.name || p.nombre || "",
+        lp: (p.lp !== undefined ? p.lp : (p.legajo !== undefined ? p.legajo : null)),
+        grado: p.grado || p.jerarquia || p.rol || ""
+      };
+    }).filter(p => p.name);
+    PADRON.sort((a,b) => a.name.localeCompare(b.name, "es"));
+    const escRef = db.collection("meta").doc("escuadras");
+    const escSnap = await escRef.get();
+    if(!escSnap.exists){
+      await escRef.set({list: SEED_ESCUADRAS});
+      ESCUADRAS = SEED_ESCUADRAS.slice();
+    } else {
+      ESCUADRAS = escSnap.data().list || [];
+    }
+    setConexion("ok", "Conectado · " + PADRON.length + " en padrón");
+    return true;
+  }catch(e){
+    console.error(e);
+    setConexion("error", "Error de conexión");
+    return false;
+  }
+}
+
+// ---------- Login ----------
+function ingresar(){
+  const v = $("loginInput").value.trim();
+  $("loginError").textContent = "";
+  if(!v) return;
+  if(v.toUpperCase() === CLAVE_JEFATURA){
+    iniciarSesion({rol:"jefatura", name:"Jefatura"});
+    return;
+  }
+  const n = lpNum(v);
+  if(n == null){ $("loginError").textContent = "Ingresá un número de legajo válido (ej: 244)."; return; }
+  const p = PADRON.find(x => lpNum(x.lp) === n);
+  if(!p){ $("loginError").textContent = "No encontramos el legajo " + n + " en el padrón."; return; }
+  iniciarSesion({rol:"personal", name:p.name, lp:p.lp, grado:p.grado});
+}
+function iniciarSesion(s){
+  SESION = s;
+  lsSet(LS_SESION, JSON.stringify(s));
+  $("loginInput").value = "";
+  montarApp();
+}
+function salir(){
+  if(unsubT) unsubT();
+  if(unsubE) unsubE();
+  unsubT = unsubE = null; SESION = null; TAREAS = []; TAREAS_TODAS = [];
+  lsDel(LS_SESION);
+  Object.values(charts).forEach(c => c.destroy()); charts = {};
+  $("app").classList.add("oculto");
+  $("login").classList.remove("oculto");
+}
+$("btnIngresar").addEventListener("click", ingresar);
+$("loginInput").addEventListener("keydown", e => { if(e.key === "Enter") ingresar(); });
+$("btnSalir").addEventListener("click", salir);
+
+function montarApp(){
+  $("login").classList.add("oculto");
+  $("app").classList.remove("oculto");
+  const jef = SESION.rol === "jefatura";
+  $("hNombre").textContent = SESION.name;
+  $("hRol").textContent = jef ? "Acceso total" : lpTexto(SESION.lp);
+  $("vistaPersonal").classList.toggle("oculto", jef);
+  $("vistaJefatura").classList.toggle("oculto", !jef);
+  if(jef){ limpiarForm(); cambiarTab("tablero"); }
+  suscribir();
+}
+
+function filtrarVisibles(){
+  if(SESION && SESION.rol === "personal"){
+    const ids = misEscuadras().map(e => e.id);
+    TAREAS = TAREAS_TODAS.filter(t => ids.includes(t.escuadraId));
+  } else {
+    TAREAS = TAREAS_TODAS.slice();
+  }
+}
+function suscribir(){
+  if(unsubT) unsubT();
+  if(unsubE) unsubE();
+  unsubE = db.collection("meta").doc("escuadras").onSnapshot(snap => {
+    ESCUADRAS = snap.exists ? (snap.data().list || []) : [];
+    filtrarVisibles(); render();
+    if(SESION && SESION.rol === "jefatura" && tabJ === "nueva") renderEscOpciones();
+  }, err => console.error(err));
+  unsubT = db.collection("tareas").onSnapshot(snap => {
+    TAREAS_TODAS = snap.docs.map(d => Object.assign({id:d.id}, d.data())).filter(t => t.escuadraId);
+    filtrarVisibles();
+    setConexion("ok", "En línea · sincronizado");
+    render();
+  }, err => {
+    console.error(err);
+    setConexion("error", "Error de conexión");
+    toast("No se pudo leer la base de tareas. Revisá las reglas de Firebase.");
+  });
+}
+
+// ---------- Render general ----------
+function render(){
+  if(!SESION) return;
+  if(SESION.rol === "personal"){ renderPersonal(); return; }
+  const now = Date.now();
+  const venc = TAREAS.filter(t => estadoDe(t, now) === "vencida").length;
+  $("cntVencidas").textContent = venc;
+  $("cntVencidas").classList.toggle("oculto", venc === 0);
+  if(tabJ === "tablero") renderTablero();
+  else if(tabJ === "tareas") renderTareas();
+  else if(tabJ === "escuadras") renderEscuadras();
+}
+setInterval(() => { if(SESION && (SESION.rol === "personal" || tabJ !== "nueva")) render(); }, 60000);
+
+function cardTarea(t, conEscuadra){
+  const now = Date.now();
+  const e = estadoDe(t, now); const E = ESTADOS[e];
+  const frac = e === "completada" ? 1 : Math.min(1, Math.max(0, (now - t.inicioMs) / Math.max(1, t.limiteMs - t.inicioMs)));
+  const barra = e === "completada" ? "verde" : e === "vencida" ? "rojo" : frac > 0.75 ? "naranja" : "amarillo";
+  const colorRest = e === "completada" ? (t.completadaMs <= t.limiteMs ? "verde" : "naranja") : E.c;
+  const jefe = jefeDe(t);
+  return '<article class="tarea prio-' + esc(t.prioridad) + '" data-id="' + t.id + '">' +
+    '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
+    '<h3>' + esc(t.titulo) + '</h3>' +
+    (conEscuadra ? '<div class="t-esc">' + esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe') + '</div>' : '') +
+    '<div class="t-fechas">Inicio ' + fFecha(t.inicioMs) + ' → Límite ' + fFecha(t.limiteMs) + '</div>' +
+    '<div class="barra"><span class="' + barra + '" style="width:' + Math.round(frac*100) + '%"></span></div>' +
+    '<div class="t-rest ' + colorRest + '">' + restante(t, now) + '</div>' +
+  '</article>';
+}
+function vacio(txt){ return '<div class="vacio">' + txt + '</div>'; }
+document.addEventListener("click", e => {
+  const card = e.target.closest(".tarea");
+  if(card && card.dataset.id) abrirDetalle(card.dataset.id);
+});
+
+// ---------- Vista personal ----------
+function renderPersonal(){
+  const now = Date.now();
+  const mis = misEscuadras();
+  $("misEscuadras").innerHTML = mis.map(e => '<span class="chip' + (e.jefe === SESION.name ? ' sel' : '') + '">' + esc(e.nombre) + (e.jefe === SESION.name ? ' · Jefe' : '') + '</span>').join("");
+  const act = TAREAS.filter(t => t.estado !== "completada");
+  const comp = TAREAS.filter(t => t.estado === "completada");
+  $("pActivas").textContent = act.length;
+  $("pVencidas").textContent = act.filter(t => estadoDe(t, now) === "vencida").length;
+  $("pCompletadas").textContent = comp.length;
+  if(!mis.length){
+    $("listaPersonal").innerHTML = vacio("Todavía no estás asignado a ninguna escuadra.<br>Consultá con Jefatura.");
+    return;
+  }
+  const varias = mis.length > 1;
+  if(filtroPersonal === "activas"){
+    const lista = act.sort((a,b) => a.limiteMs - b.limiteMs);
+    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("Tu escuadra no tiene tareas pendientes. 👍");
+  } else {
+    const lista = comp.sort((a,b) => (b.completadaMs||0) - (a.completadaMs||0));
+    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("Todavía no hay tareas completadas.");
+  }
+}
+$("segPersonal").addEventListener("click", e => {
+  const b = e.target.closest("button"); if(!b) return;
+  filtroPersonal = b.dataset.f;
+  $("segPersonal").querySelectorAll("button").forEach(x => x.classList.toggle("activo", x === b));
+  renderPersonal();
+});
+
+// ---------- Tabs jefatura ----------
+function cambiarTab(tab){
+  tabJ = tab;
+  $("tabsJ").querySelectorAll(".tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
+  ["tablero","tareas","nueva","escuadras"].forEach(t => $("tab-" + t).classList.toggle("oculto", t !== tab));
+  window.scrollTo(0, 0);
+  if(tab === "nueva") renderEscOpciones();
+  render();
+}
+$("tabsJ").addEventListener("click", e => {
+  const b = e.target.closest(".tab"); if(!b) return;
+  if(b.dataset.tab === "nueva" && !editandoId) limpiarForm();
+  cambiarTab(b.dataset.tab);
+});
+
+// ---------- Tablero ----------
+function desdePeriodo(){
+  const v = $("selPeriodo").value; const now = Date.now();
+  if(v === "30") return now - 30*864e5;
+  if(v === "90") return now - 90*864e5;
+  if(v === "anio") return new Date(new Date().getFullYear(), 0, 1).getTime();
+  return 0;
+}
+$("selPeriodo").addEventListener("change", renderTablero);
+function colores(){
+  const cs = getComputedStyle(document.documentElement);
+  const g = v => cs.getPropertyValue(v).trim();
+  return {rojo:g("--rojo"), amarillo:g("--amarillo"), verde:g("--verde"), azul:g("--azul"), gris:g("--gris"), naranja:g("--naranja"), panel:g("--panel")};
+}
+function grafico(id, cfg){
+  if(!window.Chart) return;
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), cfg);
+}
+function lunes(ms){
+  const d = new Date(ms); d.setHours(0,0,0,0);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getTime();
+}
+
+function renderTablero(){
+  const now = Date.now(); const desde = desdePeriodo(); const C = colores();
+  const act = TAREAS.filter(t => t.estado !== "completada");
+  const est = {pendiente:0, en_curso:0, programada:0, vencida:0};
+  act.forEach(t => { est[estadoDe(t, now)]++; });
+  const comp = TAREAS.filter(t => t.estado === "completada" && (t.completadaMs || 0) >= desde);
+  const tiempos = comp.map(t => Math.max(0, t.completadaMs - t.inicioMs));
+  const prom = tiempos.length ? tiempos.reduce((a,b) => a+b, 0) / tiempos.length : null;
+  const aTiempo = comp.filter(t => t.completadaMs <= t.limiteMs).length;
+
+  $("kActivas").textContent = act.length;
+  $("kVencidas").textContent = est.vencida;
+  $("kCompletadas").textContent = comp.length;
+  $("kResp").textContent = prom == null ? "–" : fDur(prom);
+  $("kATiempo").textContent = comp.length ? Math.round(aTiempo / comp.length * 100) + "%" : "–";
+
+  grafico("chEstado", {
+    type:"doughnut",
+    data:{
+      labels:["Pendientes","En curso","Programadas","Vencidas","Completadas"],
+      datasets:[{data:[est.pendiente, est.en_curso, est.programada, est.vencida, comp.length],
+        backgroundColor:[C.amarillo, C.azul, C.gris, C.rojo, C.verde], borderColor:C.panel, borderWidth:2}]
+    },
+    options:{responsive:true, maintainAspectRatio:false, cutout:"58%", plugins:{legend:{position:"bottom", labels:{boxWidth:12, padding:10}}}}
+  });
+
+  // Pendientes por escuadra
+  const pend = {};
+  act.forEach(t => {
+    const k = nombreEsc(t);
+    if(!pend[k]) pend[k] = {plazo:0, venc:0};
+    if(estadoDe(t, now) === "vencida") pend[k].venc++; else pend[k].plazo++;
+  });
+  const pendArr = Object.entries(pend).sort((a,b) => (b[1].venc+b[1].plazo) - (a[1].venc+a[1].plazo) || b[1].venc - a[1].venc);
+  $("wrapPend").style.height = Math.max(200, pendArr.length * 32 + 70) + "px";
+  grafico("chPend", {
+    type:"bar",
+    data:{
+      labels: pendArr.map(x => x[0]),
+      datasets:[
+        {label:"En plazo", data:pendArr.map(x => x[1].plazo), backgroundColor:C.amarillo},
+        {label:"Vencidas", data:pendArr.map(x => x[1].venc), backgroundColor:C.rojo}
+      ]
+    },
+    options:{indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true, beginAtZero:true, ticks:{precision:0}}, y:{stacked:true}},
+      plugins:{legend:{position:"bottom", labels:{boxWidth:12}}}}
+  });
+
+  // Tiempo de respuesta por escuadra
+  const resp = {};
+  comp.forEach(t => {
+    const k = nombreEsc(t);
+    if(!resp[k]) resp[k] = {sum:0, n:0, ok:0};
+    resp[k].sum += Math.max(0, t.completadaMs - t.inicioMs); resp[k].n++;
+    if(t.completadaMs <= t.limiteMs) resp[k].ok++;
+  });
+  const respArr = Object.entries(resp).map(x => [x[0], x[1].sum / x[1].n, x[1]]).sort((a,b) => b[1] - a[1]);
+  const enDias = respArr.some(x => x[1] > 48*3600000);
+  const div = enDias ? 864e5 : 3600000;
+  $("wrapResp").style.height = Math.max(200, respArr.length * 32 + 70) + "px";
+  grafico("chResp", {
+    type:"bar",
+    data:{
+      labels: respArr.map(x => x[0]),
+      datasets:[{label: enDias ? "Días promedio" : "Horas promedio",
+        data: respArr.map(x => Math.round(x[1] / div * 10) / 10),
+        backgroundColor: respArr.map(x => x[2].ok === x[2].n ? C.verde : (x[2].ok / x[2].n >= 0.5 ? C.naranja : C.rojo))}]
+    },
+    options:{indexAxis:"y", responsive:true, maintainAspectRatio:false,
+      scales:{x:{beginAtZero:true, title:{display:true, text: enDias ? "días" : "horas"}}},
+      plugins:{legend:{display:false}, tooltip:{callbacks:{afterLabel: ctx => {
+        const r = respArr[ctx.dataIndex][2];
+        return r.n + " completadas · " + r.ok + " a tiempo";
+      }}}}}
+  });
+
+  // Completadas por semana
+  const lunesHoy = lunes(now);
+  const semanas = [];
+  for(let i = 7; i >= 0; i--) semanas.push(lunes(lunesHoy - i*7*864e5 + 12*3600000));
+  const ok = semanas.map(() => 0), tarde = semanas.map(() => 0);
+  TAREAS.forEach(t => {
+    if(t.estado !== "completada" || !t.completadaMs) return;
+    const idx = semanas.indexOf(lunes(t.completadaMs));
+    if(idx < 0) return;
+    if(t.completadaMs <= t.limiteMs) ok[idx]++; else tarde[idx]++;
+  });
+  grafico("chSemana", {
+    type:"bar",
+    data:{
+      labels: semanas.map(ms => { const d = new Date(ms); return String(d.getDate()).padStart(2,"0") + "/" + String(d.getMonth()+1).padStart(2,"0"); }),
+      datasets:[
+        {label:"A tiempo", data:ok, backgroundColor:C.verde},
+        {label:"Fuera de plazo", data:tarde, backgroundColor:C.naranja}
+      ]
+    },
+    options:{responsive:true, maintainAspectRatio:false,
+      scales:{x:{stacked:true}, y:{stacked:true, beginAtZero:true, ticks:{precision:0}}},
+      plugins:{legend:{position:"bottom", labels:{boxWidth:12}}}}
+  });
+
+  const venc = act.filter(t => estadoDe(t, now) === "vencida").sort((a,b) => a.limiteMs - b.limiteMs);
+  $("listaVencidas").innerHTML = venc.length ? venc.map(t => cardTarea(t, true)).join("") : vacio("No hay tareas vencidas. 👍");
+}
+
+// ---------- Lista de tareas (jefatura) ----------
+function renderTareas(){
+  const now = Date.now();
+  const sel = $("fEscuadra"); const actual = sel.value;
+  sel.innerHTML = '<option value="">Todas las escuadras</option>' + ESCUADRAS.map(e => '<option value="' + esc(e.id) + '"' + (e.id === actual ? ' selected' : '') + '>' + esc(e.nombre) + '</option>').join("");
+  const txt = $("fTexto").value.trim().toLowerCase();
+  const fe = $("fEstado").value; const fs = sel.value;
+  const lista = TAREAS.filter(t => {
+    const e = estadoDe(t, now);
+    if(fe === "activas" && e === "completada") return false;
+    if(fe !== "activas" && fe !== "todas" && e !== fe) return false;
+    if(fs && t.escuadraId !== fs) return false;
+    if(txt && !((t.titulo||"") + " " + (t.descripcion||"") + " " + nombreEsc(t)).toLowerCase().includes(txt)) return false;
+    return true;
+  });
+  lista.sort((a,b) => {
+    const ca = a.estado === "completada", cb = b.estado === "completada";
+    if(ca !== cb) return ca ? 1 : -1;
+    return ca ? (b.completadaMs||0) - (a.completadaMs||0) : a.limiteMs - b.limiteMs;
+  });
+  $("fResultado").textContent = lista.length + (lista.length === 1 ? " tarea" : " tareas");
+  $("listaTareas").innerHTML = lista.length ? lista.map(t => cardTarea(t, true)).join("") : vacio("No hay tareas con esos filtros.");
+}
+["fTexto","fEstado","fEscuadra"].forEach(id => $(id).addEventListener("input", renderTareas));
+
+// ---------- Escuadras (jefatura) ----------
+function renderEscuadras(){
+  const now = Date.now();
+  const enAlguna = new Set();
+  ESCUADRAS.forEach(e => { if(e.jefe) enAlguna.add(e.jefe); (e.integrantes || []).forEach(n => enAlguna.add(n)); });
+  const sinJefe = ESCUADRAS.filter(e => !e.jefe).length;
+  $("escResumen").textContent = ESCUADRAS.length + " escuadras · " + enAlguna.size + " personas asignadas" + (sinJefe ? " · " + sinJefe + " sin jefe" : "");
+  $("listaEscuadras").innerHTML = ESCUADRAS.length ? ESCUADRAS.map(e => {
+    const ts = TAREAS.filter(t => t.escuadraId === e.id);
+    let act = 0, venc = 0, comp = 0, sum = 0, ok = 0;
+    ts.forEach(t => {
+      const st = estadoDe(t, now);
+      if(st === "completada"){ comp++; sum += Math.max(0, t.completadaMs - t.inicioMs); if(t.completadaMs <= t.limiteMs) ok++; }
+      else { act++; if(st === "vencida") venc++; }
+    });
+    const n = (e.integrantes || []).length + (e.jefe ? 1 : 0);
+    return '<div class="escuadra">' +
+      '<div class="n">' + esc(e.nombre) + '</div>' +
+      '<div class="d">' + esc(e.desc || "") + '</div>' +
+      '<div class="j">' + (e.jefe ? 'Jefe: <b>' + esc(e.jefe) + '</b>' : '<span class="rojo">Sin jefe asignado</span>') + ' · ' + n + (n === 1 ? ' integrante' : ' integrantes') + '</div>' +
+      '<div class="mini">' +
+        '<div><b class="amarillo">' + act + '</b><span>Activas</span></div>' +
+        '<div><b class="rojo">' + venc + '</b><span>Vencidas</span></div>' +
+        '<div><b class="verde">' + comp + '</b><span>Hechas</span></div>' +
+        '<div><b style="font-size:14px;line-height:20px">' + (comp ? fDur(sum / comp) : "–") + '</b><span>T. resp.</span></div>' +
+        '<div><b>' + (comp ? Math.round(ok / comp * 100) + "%" : "–") + '</b><span>A tiempo</span></div>' +
+      '</div>' +
+      '<div class="esc-acc"><button class="btn sec chico" data-ver="' + esc(e.id) + '">Ver tareas</button><button class="btn sec chico" data-editar="' + esc(e.id) + '">Editar / integrantes</button></div>' +
+    '</div>';
+  }).join("") : vacio("No hay escuadras creadas.");
+  const sin = PADRON.filter(p => !enAlguna.has(p.name));
+  $("sinEscuadra").textContent = sin.length ? sin.length + " personas del padrón todavía no están en ninguna escuadra: " + sin.map(p => p.name).join(" · ") : "Todo el personal del padrón está en al menos una escuadra. 👍";
+}
+$("listaEscuadras").addEventListener("click", e => {
+  const v = e.target.closest("[data-ver]");
+  if(v){
+    $("fEstado").value = "todas"; $("fTexto").value = "";
+    cambiarTab("tareas");
+    $("fEscuadra").value = v.dataset.ver; renderTareas();
+    return;
+  }
+  const ed = e.target.closest("[data-editar]");
+  if(ed) abrirEscuadra(ed.dataset.editar);
+});
+$("btnNuevaEsc").addEventListener("click", () => abrirEscuadra(null));
+
+function abrirEscuadra(id){
+  const e = id ? escuadraPorId(id) : null;
+  escEditando = id;
+  escIntegrantes = new Set(e ? (e.integrantes || []) : []);
+  $("escTitulo").textContent = e ? "Editar escuadra" : "Nueva escuadra";
+  $("eNombre").value = e ? e.nombre : "";
+  $("eDesc").value = e ? (e.desc || "") : "";
+  $("eBuscar").value = "";
+  $("eJefe").innerHTML = '<option value="">— Sin jefe asignado —</option>' + PADRON.map(p =>
+    '<option value="' + esc(p.name) + '"' + (e && e.jefe === p.name ? ' selected' : '') + '>' + esc(p.name) + (p.grado ? ' · ' + esc(p.grado) : '') + '</option>').join("");
+  $("btnBorrarEsc").classList.toggle("oculto", !e);
+  renderEChecklist();
+  abrirModal("modalEsc");
+}
+function renderEChecklist(){
+  const q = $("eBuscar").value.trim().toLowerCase();
+  const jefe = $("eJefe").value;
+  const lista = PADRON.filter(p => p.name !== jefe && (!q || p.name.toLowerCase().includes(q)));
+  lista.sort((a,b) => (escIntegrantes.has(b.name) ? 1 : 0) - (escIntegrantes.has(a.name) ? 1 : 0) || a.name.localeCompare(b.name, "es"));
+  $("eChecklist").innerHTML = lista.length ? lista.map(p =>
+    '<label><input type="checkbox" data-name="' + esc(p.name) + '"' + (escIntegrantes.has(p.name) ? " checked" : "") + '>' +
+    '<span>' + esc(p.name) + '<span class="g">' + esc(p.grado || "") + ' · ' + lpTexto(p.lp) + '</span></span></label>'
+  ).join("") : '<div class="vacio" style="border:none">Sin resultados</div>';
+  escIntegrantes.delete(jefe);
+  $("eCount").textContent = "(" + escIntegrantes.size + ")";
+}
+$("eBuscar").addEventListener("input", renderEChecklist);
+$("eJefe").addEventListener("change", renderEChecklist);
+$("eChecklist").addEventListener("change", e => {
+  const cb = e.target; if(!cb.dataset.name) return;
+  if(cb.checked) escIntegrantes.add(cb.dataset.name); else escIntegrantes.delete(cb.dataset.name);
+  $("eCount").textContent = "(" + escIntegrantes.size + ")";
+});
+async function guardarEscuadras(nuevaLista){
+  await db.collection("meta").doc("escuadras").set({list: nuevaLista});
+}
+$("btnGuardarEsc").addEventListener("click", async () => {
+  const nombre = $("eNombre").value.trim();
+  if(!nombre){ toast("Falta el nombre de la escuadra"); $("eNombre").focus(); return; }
+  const jefe = $("eJefe").value || null;
+  const datos = {nombre:nombre, desc:$("eDesc").value.trim(), jefe:jefe, integrantes:[...escIntegrantes].filter(n => n !== jefe).sort((a,b) => a.localeCompare(b, "es"))};
+  let lista;
+  if(escEditando){
+    lista = ESCUADRAS.map(e => e.id === escEditando ? Object.assign({}, e, datos) : e);
+  } else {
+    lista = ESCUADRAS.concat([Object.assign({id:"e" + Date.now().toString(36)}, datos)]);
+  }
+  $("btnGuardarEsc").disabled = true;
+  try{ await guardarEscuadras(lista); toast("Escuadra guardada"); cerrarModal("modalEsc"); }
+  catch(err){ console.error(err); toast("No se pudo guardar. Revisá la conexión."); }
+  finally{ $("btnGuardarEsc").disabled = false; }
+});
+$("btnBorrarEsc").addEventListener("click", async () => {
+  const e = escuadraPorId(escEditando); if(!e) return;
+  const activas = TAREAS.filter(t => t.escuadraId === e.id && t.estado !== "completada").length;
+  if(!confirm("¿Eliminar la escuadra " + e.nombre + "?" + (activas ? "\nTiene " + activas + " tareas activas: van a quedar como 'Escuadra eliminada' hasta que las reasignes." : ""))) return;
+  try{ await guardarEscuadras(ESCUADRAS.filter(x => x.id !== e.id)); toast("Escuadra eliminada"); cerrarModal("modalEsc"); }
+  catch(err){ console.error(err); toast("No se pudo eliminar. Revisá la conexión."); }
+});
+
+// ---------- Formulario de tareas ----------
+function limpiarForm(){
+  editandoId = null; escSel = new Set(); prioSel = "media";
+  $("nTitulo").value = ""; $("nDesc").value = "";
+  const ini = new Date(); ini.setSeconds(0, 0);
+  $("nInicio").value = toLocalInput(ini.getTime());
+  $("nLimite").value = toLocalInput(ini.getTime() + 168*3600000);
+  $("formTitulo").textContent = "Asignar tarea";
+  $("btnGuardar").textContent = "Asignar tarea";
+  $("btnCancelarEd").classList.add("oculto");
+  pintarPrio(); renderEscOpciones();
+}
+function pintarPrio(){ $("nPrio").querySelectorAll(".chip").forEach(c => c.classList.toggle("activo", c.dataset.p === prioSel)); }
+$("nPrio").addEventListener("click", e => { const c = e.target.closest(".chip"); if(!c) return; prioSel = c.dataset.p; pintarPrio(); });
+$("nPlazos").addEventListener("click", e => {
+  const c = e.target.closest(".chip"); if(!c) return;
+  let ini = fromLocalInput($("nInicio").value);
+  if(isNaN(ini)){ ini = Date.now(); $("nInicio").value = toLocalInput(ini); }
+  $("nLimite").value = toLocalInput(ini + parseInt(c.dataset.h, 10) * 3600000);
+});
+function renderEscOpciones(){
+  $("nEscuadras").innerHTML = ESCUADRAS.length ? ESCUADRAS.map(e => {
+    const n = (e.integrantes || []).length + (e.jefe ? 1 : 0);
+    return '<label class="esc-op' + (escSel.has(e.id) ? ' sel' : '') + '"><input type="checkbox" data-esc="' + esc(e.id) + '"' + (escSel.has(e.id) ? ' checked' : '') + '>' +
+      '<span><b>' + esc(e.nombre) + '</b>' +
+      (e.jefe ? '<small>Jefe: ' + esc(e.jefe) + ' · ' + n + ' int.</small>' : '<small class="sinjefe">Sin jefe asignado · ' + n + ' int.</small>') +
+      '</span></label>';
+  }).join("") : vacio("Primero creá escuadras en la pestaña Escuadras.");
+  $("nSelCount").textContent = escSel.size ? "(" + escSel.size + " seleccionada" + (escSel.size > 1 ? "s" : "") + ")" : "";
+}
+$("nEscuadras").addEventListener("change", e => {
+  const cb = e.target; if(!cb.dataset.esc) return;
+  if(cb.checked){ if(editandoId) escSel.clear(); escSel.add(cb.dataset.esc); }
+  else escSel.delete(cb.dataset.esc);
+  renderEscOpciones();
+});
+$("btnCancelarEd").addEventListener("click", () => { limpiarForm(); cambiarTab("tareas"); });
+
+async function guardarTarea(){
+  const titulo = $("nTitulo").value.trim();
+  const desc = $("nDesc").value.trim();
+  const ini = fromLocalInput($("nInicio").value);
+  const lim = fromLocalInput($("nLimite").value);
+  if(!titulo){ toast("Falta el título de la tarea"); $("nTitulo").focus(); return; }
+  if(!escSel.size){ toast("Elegí al menos una escuadra"); return; }
+  if(isNaN(ini) || isNaN(lim)){ toast("Completá fecha de inicio y límite"); return; }
+  if(lim <= ini){ toast("El límite tiene que ser posterior al inicio"); return; }
+  const escs = [...escSel].map(id => escuadraPorId(id)).filter(Boolean);
+  const btn = $("btnGuardar"); btn.disabled = true;
+  try{
+    if(editandoId){
+      const t = TAREAS.find(x => x.id === editandoId);
+      const e = escs[0];
+      const nota = (t && t.escuadraId !== e.id) ? "Reasignada de " + nombreEsc(t) + " a " + e.nombre : "Tarea editada por " + SESION.name;
+      await db.collection("tareas").doc(editandoId).update({
+        titulo:titulo, descripcion:desc, prioridad:prioSel, inicioMs:ini, limiteMs:lim,
+        escuadraId:e.id, escuadraNombre:e.nombre,
+        historial: firebase.firestore.FieldValue.arrayUnion(hist(nota))
+      });
+      toast("Cambios guardados");
+    } else {
+      const batch = db.batch(); const now = Date.now();
+      const grupo = escs.length > 1 ? "g" + now : null;
+      escs.forEach(e => {
+        batch.set(db.collection("tareas").doc(), {
+          titulo:titulo, descripcion:desc, prioridad:prioSel, inicioMs:ini, limiteMs:lim,
+          escuadraId:e.id, escuadraNombre:e.nombre,
+          estado:"pendiente", creadaMs:now, creadaPor:SESION.name, tomadaMs:null, completadaMs:null, completadaPor:null,
+          grupo:grupo, historial:[{ms:now, quien:SESION.name, txt:"Tarea asignada a " + e.nombre}]
+        });
+      });
+      await batch.commit();
+      toast(escs.length > 1 ? "Tarea asignada a " + escs.length + " escuadras" : "Tarea asignada");
+    }
+    limpiarForm();
+    $("fEstado").value = "activas"; $("fEscuadra").value = ""; $("fTexto").value = "";
+    cambiarTab("tareas");
+  }catch(e){
+    console.error(e);
+    toast("Error al guardar: revisá la conexión o las reglas de Firebase");
+  }finally{
+    btn.disabled = false;
+  }
+}
+$("btnGuardar").addEventListener("click", guardarTarea);
+
+function editarTarea(t){
+  editandoId = t.id;
+  escSel = new Set(escuadraPorId(t.escuadraId) ? [t.escuadraId] : []);
+  prioSel = t.prioridad || "media";
+  $("nTitulo").value = t.titulo || "";
+  $("nDesc").value = t.descripcion || "";
+  $("nInicio").value = toLocalInput(t.inicioMs);
+  $("nLimite").value = toLocalInput(t.limiteMs);
+  $("formTitulo").textContent = "Editar tarea";
+  $("btnGuardar").textContent = "Guardar cambios";
+  $("btnCancelarEd").classList.remove("oculto");
+  pintarPrio();
+  cambiarTab("nueva");
+}
+
+// ---------- Modales ----------
+function abrirModal(id){ $(id).classList.remove("oculto"); document.body.style.overflow = "hidden"; }
+function cerrarModal(id){
+  $(id).classList.add("oculto");
+  if($("modalDetalle").classList.contains("oculto") && $("modalEsc").classList.contains("oculto")) document.body.style.overflow = "";
+  if(id === "modalDetalle") detalleId = null;
+  if(id === "modalEsc") escEditando = null;
+}
+$("modalEsc").addEventListener("click", e => {
+  if(e.target === $("modalEsc") || e.target.closest("[data-cerrar]")) cerrarModal("modalEsc");
+});
+
+// ---------- Detalle de tarea ----------
+function abrirDetalle(id){
+  const t = TAREAS.find(x => x.id === id); if(!t) return;
+  detalleId = id;
+  const now = Date.now(); const e = estadoDe(t, now); const E = ESTADOS[e];
+  const jef = SESION.rol === "jefatura";
+  const cierra = puedeCerrar(t);
+  const jefe = jefeDe(t);
+  $("detTitulo").textContent = t.titulo;
+  const historial = (t.historial || []).slice().sort((a,b) => a.ms - b.ms);
+  let acc = "";
+  if(t.estado !== "completada"){
+    if(cierra){
+      if(t.estado === "pendiente") acc += '<button class="btn sec" data-acc="comenzar">▶ Comenzar</button>';
+      acc += '<button class="btn ok' + (t.estado === "pendiente" ? '' : ' ancho') + '" data-acc="completar">✓ Completada</button>';
+    } else {
+      acc += '<div class="aviso">Solo el jefe de escuadra' + (jefe ? ' (' + esc(jefe) + ')' : '') + ' o Jefatura pueden marcarla como completada. Podés dejar una nota con novedades.</div>';
+    }
+  } else if(jef){
+    acc += '<button class="btn sec ancho" data-acc="reabrir">↺ Reabrir tarea</button>';
+  }
+  acc += '<button class="btn sec ancho" data-acc="nota">Agregar nota</button>';
+  if(jef){
+    acc += '<button class="btn sec" data-acc="editar">Editar / reasignar</button>';
+    acc += '<button class="btn sec" data-acc="whatsapp">Avisar por WhatsApp</button>';
+    acc += '<button class="btn peligro ancho" data-acc="eliminar">Eliminar tarea</button>';
+  }
+  $("detBody").innerHTML =
+    '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
+    '<div class="t-rest ' + E.c + '" style="margin-top:4px">' + restante(t, now) + '</div>' +
+    (t.descripcion ? '<div class="det-desc">' + esc(t.descripcion) + '</div>' : '') +
+    '<div class="det-grid">' +
+      '<div><span class="etq">Escuadra</span><b>' + esc(nombreEsc(t)) + '</b></div>' +
+      '<div><span class="etq">Jefe de escuadra</span><b>' + esc(jefe || "Sin asignar") + '</b></div>' +
+      '<div><span class="etq">Inicio</span><b>' + fFecha(t.inicioMs) + '</b></div>' +
+      '<div><span class="etq">Límite</span><b>' + fFecha(t.limiteMs) + '</b></div>' +
+      '<div><span class="etq">Asignó</span><b>' + esc(t.creadaPor || "—") + '</b></div>' +
+      (t.tomadaMs ? '<div><span class="etq">Comenzó</span><b>' + fFecha(t.tomadaMs) + '</b></div>' : '') +
+      (t.completadaMs ? '<div><span class="etq">Completada</span><b>' + fFecha(t.completadaMs) + (t.completadaPor ? '<br>' + esc(t.completadaPor) : '') + '</b></div>' : '') +
+    '</div>' +
+    '<span class="etq">Historial</span>' +
+    '<div class="hist">' + historial.map(h => '<p>' + esc(h.txt) + '<small>' + fFecha(h.ms) + ' · ' + esc(h.quien) + '</small></p>').join("") + '</div>' +
+    '<label class="etq" for="notaTxt">' + (cierra && t.estado !== "completada" ? 'Comentario (opcional al completar)' : 'Nota') + '</label>' +
+    '<textarea class="campo" id="notaTxt" placeholder="Qué se hizo, observaciones, novedades…"></textarea>' +
+    '<div class="acciones">' + acc + '</div>';
+  abrirModal("modalDetalle");
+}
+$("modalDetalle").addEventListener("click", e => {
+  if(e.target === $("modalDetalle") || e.target.closest("[data-cerrar]")){ cerrarModal("modalDetalle"); return; }
+  const b = e.target.closest("[data-acc]"); if(b) accion(b.dataset.acc, b);
+});
+
+async function accion(acc, btn){
+  const t = TAREAS.find(x => x.id === detalleId); if(!t) return;
+  const ref = db.collection("tareas").doc(t.id);
+  const nota = ($("notaTxt") ? $("notaTxt").value : "").trim();
+  const AU = firebase.firestore.FieldValue.arrayUnion;
+  if(acc === "editar"){ cerrarModal("modalDetalle"); editarTarea(t); return; }
+  if(acc === "whatsapp"){
+    const url = location.href.split("?")[0].split("#")[0];
+    const jefe = jefeDe(t);
+    const txt = "*BVC · Tarea asignada*\n" +
+      "*" + t.titulo + "*\n" +
+      (t.descripcion ? t.descripcion + "\n" : "") +
+      "\nEscuadra: " + nombreEsc(t) +
+      (jefe ? "\nResponsable: " + jefe : "") +
+      "\nInicio: " + fFecha(t.inicioMs) +
+      "\nLímite: " + fFecha(t.limiteMs) +
+      "\n" + (PRIO[t.prioridad] || "") +
+      "\n\nVer la tarea (ingresá con tu legajo):\n" + url;
+    window.location.href = "https://wa.me/?text=" + encodeURIComponent(txt);
+    return;
+  }
+  if((acc === "comenzar" || acc === "completar") && !puedeCerrar(t)){ toast("Solo el jefe de escuadra puede hacerlo"); return; }
+  if(acc === "nota" && !nota){ toast("Escribí la nota primero"); $("notaTxt").focus(); return; }
+  if(acc === "completar" && !confirm("¿Marcar esta tarea como completada?")) return;
+  if(acc === "eliminar" && !confirm("¿Eliminar definitivamente esta tarea? No se puede deshacer.")) return;
+  if(btn) btn.disabled = true;
+  try{
+    const now = Date.now();
+    if(acc === "comenzar"){
+      await ref.update({estado:"en_curso", tomadaMs:now, historial:AU(hist("Comenzó la tarea" + (nota ? ": " + nota : "")))});
+      toast("Tarea en curso");
+    } else if(acc === "completar"){
+      await ref.update({estado:"completada", completadaMs:now, completadaPor:SESION.name, historial:AU(hist("Marcada como completada" + (nota ? ": " + nota : "")))});
+      toast("¡Tarea completada!");
+    } else if(acc === "reabrir"){
+      await ref.update({estado:(t.tomadaMs ? "en_curso" : "pendiente"), completadaMs:null, completadaPor:null, historial:AU(hist("Reabierta" + (nota ? ": " + nota : "")))});
+      toast("Tarea reabierta");
+    } else if(acc === "nota"){
+      await ref.update({historial:AU(hist(nota))});
+      toast("Nota agregada");
+    } else if(acc === "eliminar"){
+      await ref.delete();
+      toast("Tarea eliminada");
+    }
+    cerrarModal("modalDetalle");
+  }catch(e){
+    console.error(e);
+    toast("No se pudo guardar el cambio. Revisá la conexión.");
+    if(btn) btn.disabled = false;
+  }
+}
+
+// ---------- Arranque ----------
+(async function iniciar(){
+  const ok = await cargarPadron();
+  const btn = $("btnIngresar");
+  if(!ok){
+    btn.textContent = "Sin conexión";
+    $("loginError").textContent = "No se pudo conectar con la base. Revisá tu conexión y recargá la página.";
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = "Ingresar";
+  let guardada = null;
+  try{ guardada = JSON.parse(lsGet(LS_SESION) || "null"); }catch(e){ guardada = null; }
+  if(guardada && guardada.rol === "jefatura"){ SESION = guardada; montarApp(); }
+  else if(guardada && guardada.rol === "personal" && PADRON.some(p => p.name === guardada.name)){ SESION = guardada; montarApp(); }
+  else { lsDel(LS_SESION); $("loginInput").focus(); }
+})();
+</script>
+</body>
+</html>
