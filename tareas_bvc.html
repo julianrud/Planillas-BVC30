@@ -213,7 +213,7 @@ textarea.campo{min-height:80px;resize:vertical}
   <!-- ===== Vista personal ===== -->
   <div id="vistaPersonal" class="oculto">
     <main>
-      <h2 class="sec">Tareas de mi escuadra</h2>
+      <h2 class="sec">Mis tareas</h2>
       <div class="mis-esc" id="misEscuadras"></div>
       <div class="kpis tres">
         <div class="kpi amarillo"><div class="v" id="pActivas">0</div><div class="l">Activas</div></div>
@@ -257,8 +257,8 @@ textarea.campo{min-height:80px;resize:vertical}
         </div>
         <div class="graficos">
           <div class="card"><h3>Estado actual</h3><div class="sub">Tareas activas por estado + completadas del período</div><div class="lienzo"><canvas id="chEstado"></canvas></div></div>
-          <div class="card"><h3>Pendientes por escuadra</h3><div class="sub">Tareas abiertas: en plazo y vencidas</div><div class="lienzo" id="wrapPend"><canvas id="chPend"></canvas></div></div>
-          <div class="card"><h3>Tiempo de respuesta por escuadra</h3><div class="sub">Promedio desde el inicio hasta la finalización (período). Verde: todas a tiempo · naranja: la mayoría · rojo: menos de la mitad</div><div class="lienzo" id="wrapResp"><canvas id="chResp"></canvas></div></div>
+          <div class="card"><h3>Pendientes por responsable</h3><div class="sub">Tareas abiertas: en plazo y vencidas</div><div class="lienzo" id="wrapPend"><canvas id="chPend"></canvas></div></div>
+          <div class="card"><h3>Tiempo de respuesta por responsable</h3><div class="sub">Promedio desde el inicio hasta la finalización (período). Verde: todas a tiempo · naranja: la mayoría · rojo: menos de la mitad</div><div class="lienzo" id="wrapResp"><canvas id="chResp"></canvas></div></div>
           <div class="card"><h3>Completadas por semana</h3><div class="sub">Últimas 8 semanas — a tiempo vs. fuera de plazo</div><div class="lienzo"><canvas id="chSemana"></canvas></div></div>
         </div>
         <h2 class="sec">Vencidas sin resolver</h2>
@@ -272,13 +272,12 @@ textarea.campo{min-height:80px;resize:vertical}
           <select class="campo" id="fEstado">
             <option value="activas">Activas (todas)</option>
             <option value="vencida">Vencidas</option>
-            <option value="pendiente">Pendientes</option>
-            <option value="en_curso">En curso</option>
+            <option value="en_curso">En curso (en plazo)</option>
             <option value="programada">Programadas</option>
             <option value="completada">Completadas</option>
             <option value="todas">Todas</option>
           </select>
-          <select class="campo" id="fEscuadra"><option value="">Todas las escuadras</option></select>
+          <select class="campo" id="fEscuadra"><option value="">Todos los responsables</option></select>
         </div>
         <div class="etq" id="fResultado"></div>
         <div class="lista" id="listaTareas"></div>
@@ -305,8 +304,17 @@ textarea.campo{min-height:80px;resize:vertical}
             </div>
           </div>
           <div>
-            <span class="etq">Asignar a escuadra * <span id="nSelCount" style="color:var(--amarillo)"></span></span>
-            <div class="esc-opciones" id="nEscuadras"></div>
+            <span class="etq">Asignar a * <span id="nSelCount" style="color:var(--amarillo)"></span></span>
+            <div class="seg" id="nTipo" style="margin-bottom:8px">
+              <button data-t="escuadra" class="activo">Escuadra</button>
+              <button data-t="persona">Persona</button>
+            </div>
+            <div id="wrapEscuadras"><div class="esc-opciones" id="nEscuadras"></div></div>
+            <div id="wrapPersonas" class="oculto">
+              <div class="chips" id="nSeleccionados" style="margin-bottom:8px"></div>
+              <input class="campo" id="nBuscar" type="search" placeholder="Buscar persona…" style="margin-bottom:6px">
+              <div class="checklist" id="nChecklist"></div>
+            </div>
           </div>
           <div class="fila2">
             <div>
@@ -420,7 +428,7 @@ const SEED_ESCUADRAS = [
 
 const ESTADOS = {
   pendiente:  {l:"Pendiente",  c:"amarillo"},
-  en_curso:   {l:"En curso",   c:"azul"},
+  en_curso:   {l:"En curso",   c:"amarillo"},
   programada: {l:"Programada", c:"gris"},
   vencida:    {l:"Vencida",    c:"rojo"},
   completada: {l:"Completada", c:"verde"}
@@ -439,6 +447,8 @@ let charts = {};
 let detalleId = null;
 let editandoId = null;
 let escSel = new Set();
+let perSel = new Set();
+let tipoSel = "escuadra";
 let prioSel = "media";
 let escEditando = null;
 let escIntegrantes = new Set();
@@ -491,8 +501,14 @@ function setConexion(estado, texto){
 
 // ---------- Escuadras: helpers ----------
 function escuadraPorId(id){ return ESCUADRAS.find(e => e.id === id) || null; }
-function nombreEsc(t){ const e = escuadraPorId(t.escuadraId); return e ? e.nombre : (t.escuadraNombre || "Escuadra eliminada"); }
-function jefeDe(t){ const e = escuadraPorId(t.escuadraId); return e ? e.jefe : null; }
+function esPersona(t){ return t.tipo === "persona"; }
+function nombreEsc(t){
+  if(esPersona(t)) return t.asignadoNombre || "Persona";
+  const e = escuadraPorId(t.escuadraId); return e ? e.nombre : (t.escuadraNombre || "Escuadra eliminada");
+}
+function claveResp(t){ return esPersona(t) ? "p:" + t.asignadoNombre : "e:" + t.escuadraId; }
+function etiquetaResp(t){ return esPersona(t) ? "👤 " + corto(t.asignadoNombre || "") : nombreEsc(t); }
+function jefeDe(t){ if(esPersona(t)) return null; const e = escuadraPorId(t.escuadraId); return e ? e.jefe : null; }
 function misEscuadras(){
   if(!SESION || SESION.rol !== "personal") return [];
   return ESCUADRAS.filter(e => e.jefe === SESION.name || (e.integrantes || []).includes(SESION.name));
@@ -500,7 +516,14 @@ function misEscuadras(){
 function puedeCerrar(t){
   if(!SESION) return false;
   if(SESION.rol === "jefatura") return true;
+  if(esPersona(t)) return t.asignadoNombre === SESION.name;
   return jefeDe(t) === SESION.name;
+}
+function corto(n){
+  const partes = String(n).split(",");
+  if(partes.length < 2) return n;
+  const nom = partes[1].trim();
+  return partes[0].trim() + (nom ? " " + nom[0] + "." : "");
 }
 
 // ---------- Tema ----------
@@ -530,7 +553,7 @@ function estadoDe(t, now){
   if(t.estado === "completada") return "completada";
   if(t.limiteMs < now) return "vencida";
   if(t.inicioMs > now) return "programada";
-  return t.estado === "en_curso" ? "en_curso" : "pendiente";
+  return "en_curso";   // el tiempo corre solo desde el inicio: no hace falta "comenzar"
 }
 function restante(t, now){
   const e = estadoDe(t, now);
@@ -621,7 +644,7 @@ function montarApp(){
 function filtrarVisibles(){
   if(SESION && SESION.rol === "personal"){
     const ids = misEscuadras().map(e => e.id);
-    TAREAS = TAREAS_TODAS.filter(t => ids.includes(t.escuadraId));
+    TAREAS = TAREAS_TODAS.filter(t => esPersona(t) ? t.asignadoNombre === SESION.name : ids.includes(t.escuadraId));
   } else {
     TAREAS = TAREAS_TODAS.slice();
   }
@@ -635,7 +658,7 @@ function suscribir(){
     if(SESION && SESION.rol === "jefatura" && tabJ === "nueva") renderEscOpciones();
   }, err => console.error(err));
   unsubT = db.collection("tareas").onSnapshot(snap => {
-    TAREAS_TODAS = snap.docs.map(d => Object.assign({id:d.id}, d.data())).filter(t => t.escuadraId);
+    TAREAS_TODAS = snap.docs.map(d => Object.assign({id:d.id}, d.data())).filter(t => t.escuadraId || esPersona(t));
     filtrarVisibles();
     setConexion("ok", "En línea · sincronizado");
     render();
@@ -670,7 +693,9 @@ function cardTarea(t, conEscuadra){
   return '<article class="tarea prio-' + esc(t.prioridad) + '" data-id="' + t.id + '">' +
     '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
     '<h3>' + esc(t.titulo) + '</h3>' +
-    (conEscuadra ? '<div class="t-esc">' + esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe') + '</div>' : '') +
+    (conEscuadra ? '<div class="t-esc">' + (esPersona(t)
+        ? '👤 ' + esc(SESION && SESION.name === t.asignadoNombre ? "Asignada a vos" : t.asignadoNombre) + ' · individual'
+        : esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe')) + '</div>' : '') +
     '<div class="t-fechas">Inicio ' + fFecha(t.inicioMs) + ' → Límite ' + fFecha(t.limiteMs) + '</div>' +
     '<div class="barra"><span class="' + barra + '" style="width:' + Math.round(frac*100) + '%"></span></div>' +
     '<div class="t-rest ' + colorRest + '">' + restante(t, now) + '</div>' +
@@ -692,14 +717,14 @@ function renderPersonal(){
   $("pActivas").textContent = act.length;
   $("pVencidas").textContent = act.filter(t => estadoDe(t, now) === "vencida").length;
   $("pCompletadas").textContent = comp.length;
-  if(!mis.length){
-    $("listaPersonal").innerHTML = vacio("Todavía no estás asignado a ninguna escuadra.<br>Consultá con Jefatura.");
+  if(!mis.length && !TAREAS.length){
+    $("listaPersonal").innerHTML = vacio("No tenés tareas asignadas ni estás en ninguna escuadra todavía.<br>Consultá con Jefatura.");
     return;
   }
-  const varias = mis.length > 1;
+  const varias = true;
   if(filtroPersonal === "activas"){
     const lista = act.sort((a,b) => a.limiteMs - b.limiteMs);
-    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("Tu escuadra no tiene tareas pendientes. 👍");
+    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("No tenés tareas pendientes. 👍");
   } else {
     const lista = comp.sort((a,b) => (b.completadaMs||0) - (a.completadaMs||0));
     $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("Todavía no hay tareas completadas.");
@@ -771,9 +796,9 @@ function renderTablero(){
   grafico("chEstado", {
     type:"doughnut",
     data:{
-      labels:["Pendientes","En curso","Programadas","Vencidas","Completadas"],
-      datasets:[{data:[est.pendiente, est.en_curso, est.programada, est.vencida, comp.length],
-        backgroundColor:[C.amarillo, C.azul, C.gris, C.rojo, C.verde], borderColor:C.panel, borderWidth:2}]
+      labels:["En curso","Programadas","Vencidas","Completadas"],
+      datasets:[{data:[est.en_curso, est.programada, est.vencida, comp.length],
+        backgroundColor:[C.amarillo, C.gris, C.rojo, C.verde], borderColor:C.panel, borderWidth:2}]
     },
     options:{responsive:true, maintainAspectRatio:false, cutout:"58%", plugins:{legend:{position:"bottom", labels:{boxWidth:12, padding:10}}}}
   });
@@ -781,7 +806,7 @@ function renderTablero(){
   // Pendientes por escuadra
   const pend = {};
   act.forEach(t => {
-    const k = nombreEsc(t);
+    const k = etiquetaResp(t);
     if(!pend[k]) pend[k] = {plazo:0, venc:0};
     if(estadoDe(t, now) === "vencida") pend[k].venc++; else pend[k].plazo++;
   });
@@ -804,7 +829,7 @@ function renderTablero(){
   // Tiempo de respuesta por escuadra
   const resp = {};
   comp.forEach(t => {
-    const k = nombreEsc(t);
+    const k = etiquetaResp(t);
     if(!resp[k]) resp[k] = {sum:0, n:0, ok:0};
     resp[k].sum += Math.max(0, t.completadaMs - t.inicioMs); resp[k].n++;
     if(t.completadaMs <= t.limiteMs) resp[k].ok++;
@@ -862,14 +887,18 @@ function renderTablero(){
 function renderTareas(){
   const now = Date.now();
   const sel = $("fEscuadra"); const actual = sel.value;
-  sel.innerHTML = '<option value="">Todas las escuadras</option>' + ESCUADRAS.map(e => '<option value="' + esc(e.id) + '"' + (e.id === actual ? ' selected' : '') + '>' + esc(e.nombre) + '</option>').join("");
+  const personas = [...new Set(TAREAS.filter(esPersona).map(t => t.asignadoNombre))].sort((a,b) => a.localeCompare(b, "es"));
+  const op = (v, l) => '<option value="' + esc(v) + '"' + (v === actual ? ' selected' : '') + '>' + esc(l) + '</option>';
+  sel.innerHTML = '<option value="">Todos los responsables</option>' +
+    (ESCUADRAS.length ? '<optgroup label="Escuadras">' + ESCUADRAS.map(e => op("e:" + e.id, e.nombre)).join("") + '</optgroup>' : '') +
+    (personas.length ? '<optgroup label="Personas">' + personas.map(n => op("p:" + n, n)).join("") + '</optgroup>' : '');
   const txt = $("fTexto").value.trim().toLowerCase();
   const fe = $("fEstado").value; const fs = sel.value;
   const lista = TAREAS.filter(t => {
     const e = estadoDe(t, now);
     if(fe === "activas" && e === "completada") return false;
     if(fe !== "activas" && fe !== "todas" && e !== fe) return false;
-    if(fs && t.escuadraId !== fs) return false;
+    if(fs && claveResp(t) !== fs) return false;
     if(txt && !((t.titulo||"") + " " + (t.descripcion||"") + " " + nombreEsc(t)).toLowerCase().includes(txt)) return false;
     return true;
   });
@@ -891,7 +920,7 @@ function renderEscuadras(){
   const sinJefe = ESCUADRAS.filter(e => !e.jefe).length;
   $("escResumen").textContent = ESCUADRAS.length + " escuadras · " + enAlguna.size + " personas asignadas" + (sinJefe ? " · " + sinJefe + " sin jefe" : "");
   $("listaEscuadras").innerHTML = ESCUADRAS.length ? ESCUADRAS.map(e => {
-    const ts = TAREAS.filter(t => t.escuadraId === e.id);
+    const ts = TAREAS.filter(t => !esPersona(t) && t.escuadraId === e.id);
     let act = 0, venc = 0, comp = 0, sum = 0, ok = 0;
     ts.forEach(t => {
       const st = estadoDe(t, now);
@@ -910,7 +939,7 @@ function renderEscuadras(){
         '<div><b style="font-size:14px;line-height:20px">' + (comp ? fDur(sum / comp) : "–") + '</b><span>T. resp.</span></div>' +
         '<div><b>' + (comp ? Math.round(ok / comp * 100) + "%" : "–") + '</b><span>A tiempo</span></div>' +
       '</div>' +
-      '<div class="esc-acc"><button class="btn sec chico" data-ver="' + esc(e.id) + '">Ver tareas</button><button class="btn sec chico" data-editar="' + esc(e.id) + '">Editar / integrantes</button></div>' +
+      '<div class="esc-acc"><button class="btn sec chico" data-ver="' + esc(e.id) + '">Ver tareas</button><button class="btn sec chico" data-editar="' + esc(e.id) + '">✎ Nombre / integrantes</button></div>' +
     '</div>';
   }).join("") : vacio("No hay escuadras creadas.");
   const sin = PADRON.filter(p => !enAlguna.has(p.name));
@@ -921,7 +950,7 @@ $("listaEscuadras").addEventListener("click", e => {
   if(v){
     $("fEstado").value = "todas"; $("fTexto").value = "";
     cambiarTab("tareas");
-    $("fEscuadra").value = v.dataset.ver; renderTareas();
+    $("fEscuadra").value = "e:" + v.dataset.ver; renderTareas();
     return;
   }
   const ed = e.target.closest("[data-editar]");
@@ -983,7 +1012,7 @@ $("btnGuardarEsc").addEventListener("click", async () => {
 });
 $("btnBorrarEsc").addEventListener("click", async () => {
   const e = escuadraPorId(escEditando); if(!e) return;
-  const activas = TAREAS.filter(t => t.escuadraId === e.id && t.estado !== "completada").length;
+  const activas = TAREAS.filter(t => !esPersona(t) && t.escuadraId === e.id && t.estado !== "completada").length;
   if(!confirm("¿Eliminar la escuadra " + e.nombre + "?" + (activas ? "\nTiene " + activas + " tareas activas: van a quedar como 'Escuadra eliminada' hasta que las reasignes." : ""))) return;
   try{ await guardarEscuadras(ESCUADRAS.filter(x => x.id !== e.id)); toast("Escuadra eliminada"); cerrarModal("modalEsc"); }
   catch(err){ console.error(err); toast("No se pudo eliminar. Revisá la conexión."); }
@@ -991,16 +1020,50 @@ $("btnBorrarEsc").addEventListener("click", async () => {
 
 // ---------- Formulario de tareas ----------
 function limpiarForm(){
-  editandoId = null; escSel = new Set(); prioSel = "media";
-  $("nTitulo").value = ""; $("nDesc").value = "";
+  editandoId = null; escSel = new Set(); perSel = new Set(); prioSel = "media";
+  $("nTitulo").value = ""; $("nDesc").value = ""; $("nBuscar").value = "";
   const ini = new Date(); ini.setSeconds(0, 0);
   $("nInicio").value = toLocalInput(ini.getTime());
   $("nLimite").value = toLocalInput(ini.getTime() + 168*3600000);
   $("formTitulo").textContent = "Asignar tarea";
   $("btnGuardar").textContent = "Asignar tarea";
   $("btnCancelarEd").classList.add("oculto");
-  pintarPrio(); renderEscOpciones();
+  pintarPrio(); setTipo("escuadra");
 }
+function setTipo(t){
+  tipoSel = t;
+  $("nTipo").querySelectorAll("button").forEach(b => b.classList.toggle("activo", b.dataset.t === t));
+  $("wrapEscuadras").classList.toggle("oculto", t !== "escuadra");
+  $("wrapPersonas").classList.toggle("oculto", t !== "persona");
+  renderEscOpciones(); renderPerOpciones();
+}
+$("nTipo").addEventListener("click", e => { const b = e.target.closest("button"); if(b) setTipo(b.dataset.t); });
+function contarSel(){
+  const n = tipoSel === "escuadra" ? escSel.size : perSel.size;
+  const pal = tipoSel === "escuadra" ? "escuadra" : "persona";
+  $("nSelCount").textContent = n ? "(" + n + " " + pal + (n > 1 ? "s" : "") + ")" : "";
+}
+function renderPerOpciones(){
+  const q = $("nBuscar").value.trim().toLowerCase();
+  const lista = PADRON.filter(p => !q || p.name.toLowerCase().includes(q));
+  $("nChecklist").innerHTML = lista.length ? lista.map(p =>
+    '<label><input type="checkbox" data-per="' + esc(p.name) + '"' + (perSel.has(p.name) ? " checked" : "") + '>' +
+    '<span>' + esc(p.name) + '<span class="g">' + esc(p.grado || "") + ' · ' + lpTexto(p.lp) + '</span></span></label>'
+  ).join("") : '<div class="vacio" style="border:none">Sin resultados</div>';
+  $("nSeleccionados").innerHTML = [...perSel].map(n => '<button class="chip sel" data-quitar="' + esc(n) + '">' + esc(corto(n)) + ' ✕</button>').join("");
+  contarSel();
+}
+$("nBuscar").addEventListener("input", renderPerOpciones);
+$("nChecklist").addEventListener("change", e => {
+  const cb = e.target; if(!cb.dataset.per) return;
+  if(cb.checked){ if(editandoId) perSel.clear(); perSel.add(cb.dataset.per); }
+  else perSel.delete(cb.dataset.per);
+  renderPerOpciones();
+});
+$("nSeleccionados").addEventListener("click", e => {
+  const c = e.target.closest("[data-quitar]"); if(!c) return;
+  perSel.delete(c.dataset.quitar); renderPerOpciones();
+});
 function pintarPrio(){ $("nPrio").querySelectorAll(".chip").forEach(c => c.classList.toggle("activo", c.dataset.p === prioSel)); }
 $("nPrio").addEventListener("click", e => { const c = e.target.closest(".chip"); if(!c) return; prioSel = c.dataset.p; pintarPrio(); });
 $("nPlazos").addEventListener("click", e => {
@@ -1017,7 +1080,7 @@ function renderEscOpciones(){
       (e.jefe ? '<small>Jefe: ' + esc(e.jefe) + ' · ' + n + ' int.</small>' : '<small class="sinjefe">Sin jefe asignado · ' + n + ' int.</small>') +
       '</span></label>';
   }).join("") : vacio("Primero creá escuadras en la pestaña Escuadras.");
-  $("nSelCount").textContent = escSel.size ? "(" + escSel.size + " seleccionada" + (escSel.size > 1 ? "s" : "") + ")" : "";
+  contarSel();
 }
 $("nEscuadras").addEventListener("change", e => {
   const cb = e.target; if(!cb.dataset.esc) return;
@@ -1033,35 +1096,45 @@ async function guardarTarea(){
   const ini = fromLocalInput($("nInicio").value);
   const lim = fromLocalInput($("nLimite").value);
   if(!titulo){ toast("Falta el título de la tarea"); $("nTitulo").focus(); return; }
-  if(!escSel.size){ toast("Elegí al menos una escuadra"); return; }
+  if(tipoSel === "escuadra" && !escSel.size){ toast("Elegí al menos una escuadra"); return; }
+  if(tipoSel === "persona" && !perSel.size){ toast("Elegí al menos una persona"); return; }
   if(isNaN(ini) || isNaN(lim)){ toast("Completá fecha de inicio y límite"); return; }
   if(lim <= ini){ toast("El límite tiene que ser posterior al inicio"); return; }
-  const escs = [...escSel].map(id => escuadraPorId(id)).filter(Boolean);
+  // Destinos: cada uno genera una tarea independiente con su propio seguimiento
+  const destinos = tipoSel === "escuadra"
+    ? [...escSel].map(id => escuadraPorId(id)).filter(Boolean).map(e => ({
+        label: e.nombre,
+        campos: {tipo:"escuadra", escuadraId:e.id, escuadraNombre:e.nombre, asignadoNombre:null, asignadoLp:null, asignadoGrado:""}
+      }))
+    : [...perSel].map(n => PADRON.find(p => p.name === n) || {name:n, lp:null, grado:""}).map(p => ({
+        label: p.name,
+        campos: {tipo:"persona", escuadraId:null, escuadraNombre:null, asignadoNombre:p.name, asignadoLp:(p.lp == null ? null : p.lp), asignadoGrado:p.grado || ""}
+      }));
+  if(!destinos.length){ toast("Elegí a quién asignar la tarea"); return; }
   const btn = $("btnGuardar"); btn.disabled = true;
   try{
     if(editandoId){
       const t = TAREAS.find(x => x.id === editandoId);
-      const e = escs[0];
-      const nota = (t && t.escuadraId !== e.id) ? "Reasignada de " + nombreEsc(t) + " a " + e.nombre : "Tarea editada por " + SESION.name;
-      await db.collection("tareas").doc(editandoId).update({
+      const d = destinos[0];
+      const antes = t ? nombreEsc(t) : "";
+      const nota = (t && antes !== d.label) ? "Reasignada de " + antes + " a " + d.label : "Tarea editada por " + SESION.name;
+      await db.collection("tareas").doc(editandoId).update(Object.assign({
         titulo:titulo, descripcion:desc, prioridad:prioSel, inicioMs:ini, limiteMs:lim,
-        escuadraId:e.id, escuadraNombre:e.nombre,
         historial: firebase.firestore.FieldValue.arrayUnion(hist(nota))
-      });
+      }, d.campos));
       toast("Cambios guardados");
     } else {
       const batch = db.batch(); const now = Date.now();
-      const grupo = escs.length > 1 ? "g" + now : null;
-      escs.forEach(e => {
-        batch.set(db.collection("tareas").doc(), {
+      const grupo = destinos.length > 1 ? "g" + now : null;
+      destinos.forEach(d => {
+        batch.set(db.collection("tareas").doc(), Object.assign({
           titulo:titulo, descripcion:desc, prioridad:prioSel, inicioMs:ini, limiteMs:lim,
-          escuadraId:e.id, escuadraNombre:e.nombre,
           estado:"pendiente", creadaMs:now, creadaPor:SESION.name, tomadaMs:null, completadaMs:null, completadaPor:null,
-          grupo:grupo, historial:[{ms:now, quien:SESION.name, txt:"Tarea asignada a " + e.nombre}]
-        });
+          grupo:grupo, historial:[{ms:now, quien:SESION.name, txt:"Tarea asignada a " + d.label}]
+        }, d.campos));
       });
       await batch.commit();
-      toast(escs.length > 1 ? "Tarea asignada a " + escs.length + " escuadras" : "Tarea asignada");
+      toast(destinos.length > 1 ? "Tarea asignada a " + destinos.length + (tipoSel === "escuadra" ? " escuadras" : " personas") : "Tarea asignada");
     }
     limpiarForm();
     $("fEstado").value = "activas"; $("fEscuadra").value = ""; $("fTexto").value = "";
@@ -1077,10 +1150,12 @@ $("btnGuardar").addEventListener("click", guardarTarea);
 
 function editarTarea(t){
   editandoId = t.id;
-  escSel = new Set(escuadraPorId(t.escuadraId) ? [t.escuadraId] : []);
+  escSel = new Set(!esPersona(t) && escuadraPorId(t.escuadraId) ? [t.escuadraId] : []);
+  perSel = new Set(esPersona(t) ? [t.asignadoNombre] : []);
   prioSel = t.prioridad || "media";
   $("nTitulo").value = t.titulo || "";
   $("nDesc").value = t.descripcion || "";
+  $("nBuscar").value = "";
   $("nInicio").value = toLocalInput(t.inicioMs);
   $("nLimite").value = toLocalInput(t.limiteMs);
   $("formTitulo").textContent = "Editar tarea";
@@ -1088,6 +1163,7 @@ function editarTarea(t){
   $("btnCancelarEd").classList.remove("oculto");
   pintarPrio();
   cambiarTab("nueva");
+  setTipo(esPersona(t) ? "persona" : "escuadra");
 }
 
 // ---------- Modales ----------
@@ -1115,8 +1191,7 @@ function abrirDetalle(id){
   let acc = "";
   if(t.estado !== "completada"){
     if(cierra){
-      if(t.estado === "pendiente") acc += '<button class="btn sec" data-acc="comenzar">▶ Comenzar</button>';
-      acc += '<button class="btn ok' + (t.estado === "pendiente" ? '' : ' ancho') + '" data-acc="completar">✓ Completada</button>';
+      acc += '<button class="btn ok ancho" data-acc="completar">✓ Marcar completada</button>';
     } else {
       acc += '<div class="aviso">Solo el jefe de escuadra' + (jefe ? ' (' + esc(jefe) + ')' : '') + ' o Jefatura pueden marcarla como completada. Podés dejar una nota con novedades.</div>';
     }
@@ -1134,9 +1209,12 @@ function abrirDetalle(id){
     '<div class="t-rest ' + E.c + '" style="margin-top:4px">' + restante(t, now) + '</div>' +
     (t.descripcion ? '<div class="det-desc">' + esc(t.descripcion) + '</div>' : '') +
     '<div class="det-grid">' +
-      '<div><span class="etq">Escuadra</span><b>' + esc(nombreEsc(t)) + '</b></div>' +
-      '<div><span class="etq">Jefe de escuadra</span><b>' + esc(jefe || "Sin asignar") + '</b></div>' +
-      '<div><span class="etq">Inicio</span><b>' + fFecha(t.inicioMs) + '</b></div>' +
+      (esPersona(t)
+        ? '<div><span class="etq">Asignada a</span><b>' + esc(t.asignadoNombre) + '</b></div>' +
+          '<div><span class="etq">Tipo</span><b>Individual</b></div>'
+        : '<div><span class="etq">Escuadra</span><b>' + esc(nombreEsc(t)) + '</b></div>' +
+          '<div><span class="etq">Jefe de escuadra</span><b>' + esc(jefe || "Sin asignar") + '</b></div>') +
+      '<div><span class="etq">Inicio del plazo</span><b>' + fFecha(t.inicioMs) + '</b></div>' +
       '<div><span class="etq">Límite</span><b>' + fFecha(t.limiteMs) + '</b></div>' +
       '<div><span class="etq">Asignó</span><b>' + esc(t.creadaPor || "—") + '</b></div>' +
       (t.tomadaMs ? '<div><span class="etq">Comenzó</span><b>' + fFecha(t.tomadaMs) + '</b></div>' : '') +
@@ -1166,8 +1244,7 @@ async function accion(acc, btn){
     const txt = "*BVC · Tarea asignada*\n" +
       "*" + t.titulo + "*\n" +
       (t.descripcion ? t.descripcion + "\n" : "") +
-      "\nEscuadra: " + nombreEsc(t) +
-      (jefe ? "\nResponsable: " + jefe : "") +
+      (esPersona(t) ? "\nAsignada a: " + t.asignadoNombre : "\nEscuadra: " + nombreEsc(t) + (jefe ? "\nResponsable: " + jefe : "")) +
       "\nInicio: " + fFecha(t.inicioMs) +
       "\nLímite: " + fFecha(t.limiteMs) +
       "\n" + (PRIO[t.prioridad] || "") +
@@ -1175,7 +1252,7 @@ async function accion(acc, btn){
     window.location.href = "https://wa.me/?text=" + encodeURIComponent(txt);
     return;
   }
-  if((acc === "comenzar" || acc === "completar") && !puedeCerrar(t)){ toast("Solo el jefe de escuadra puede hacerlo"); return; }
+  if(acc === "completar" && !puedeCerrar(t)){ toast("Solo el responsable puede marcarla completada"); return; }
   if(acc === "nota" && !nota){ toast("Escribí la nota primero"); $("notaTxt").focus(); return; }
   if(acc === "completar" && !confirm("¿Marcar esta tarea como completada?")) return;
   if(acc === "eliminar" && !confirm("¿Eliminar definitivamente esta tarea? No se puede deshacer.")) return;
