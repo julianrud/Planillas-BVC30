@@ -563,10 +563,62 @@ function restante(t, now){
   return "Vence en " + fDur(t.limiteMs - now);
 }
 
+// ---------- Aspirantes con legajo provisorio (Listado Personal, Numerarios Cuartel Central) ----------
+const ASPIRANTES_PROVISORIOS = [
+  {lp:"30/0001", name:"Gomez, Luz Maiara"},
+  {lp:"30/0002", name:"Nuttini, Bruno Damian"},
+  {lp:"30/0003", name:"Pia, Micaela Rocio"},
+  {lp:"30/0004", name:"Garcia, Salvador"},
+  {lp:"30/0005", name:"Quiroga, Nazareno Luis"},
+  {lp:"30/0006", name:"Olea, Gloria Elizabeth"},
+  {lp:"30/0007", name:"Orellano, Silvia Marianela"},
+  {lp:"30/0008", name:"Trejo, Aixa Yazmin"},
+  {lp:"30/0009", name:"Serrano Javorsky, Amor Ayelen"},
+  {lp:"30/0010", name:"Santiago, Rodolfo Anibal"}
+];
+function normTxt(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
+function apellido1(n){ return normTxt(String(n).split(",")[0]).split(/\s+/)[0]; }
+// Suma los aspirantes al padrón compartido (meta/personal). Si el aspirante ya estaba cargado
+// sin legajo (importación de guardias), solo le agrega el legajo y conserva su nombre para no
+// romper las guardias ya asignadas. Es idempotente: si ya está todo cargado, no escribe nada.
+async function sincronizarAspirantes(){
+  const ref = db.collection("meta").doc("personal");
+  return db.runTransaction(async tx => {
+    const snap = await tx.get(ref);
+    if(!snap.exists) return 0;
+    const list = (snap.data().list || []).map(p => typeof p === "string" ? {name:p, lp:null, grado:""} : Object.assign({}, p));
+    const lpDe = p => (p.lp !== undefined && p.lp !== null && p.lp !== "") ? p.lp : (p.legajo !== undefined ? p.legajo : null);
+    let cambios = 0;
+    ASPIRANTES_PROVISORIOS.forEach(a => {
+      const n = lpNum(a.lp);
+      if(list.some(p => lpNum(lpDe(p)) === n)) return;
+      const candidatos = list.filter(p => lpNum(lpDe(p)) == null &&
+        (!p.grado || /aspirante/i.test(p.grado)) && apellido1(p.name) === apellido1(a.name));
+      if(candidatos.length === 1){
+        candidatos[0].lp = a.lp;
+        if(!candidatos[0].grado) candidatos[0].grado = "Aspirante";
+      } else if(candidatos.length === 0){
+        list.push({name:a.name, lp:a.lp, grado:"Aspirante"});
+      } else {
+        console.warn("Aspirante ambiguo, no se asignó legajo:", a.name, candidatos.map(c => c.name));
+        return;
+      }
+      cambios++;
+    });
+    if(cambios){
+      list.sort((a,b) => String(a.name).localeCompare(String(b.name), "es"));
+      tx.update(ref, {list: list});
+    }
+    return cambios;
+  });
+}
+
 // ---------- Carga inicial ----------
 async function cargarPadron(){
   setConexion("", "Conectando…");
   try{
+    try{ const c = await sincronizarAspirantes(); if(c) console.log("Aspirantes actualizados en el padrón:", c); }
+    catch(e){ console.warn("No se pudo sincronizar aspirantes", e); }
     const snap = await db.collection("meta").doc("personal").get();
     const list = snap.exists ? (snap.data().list || []) : [];
     PADRON = list.map(p => {
