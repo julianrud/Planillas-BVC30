@@ -193,7 +193,7 @@ textarea.campo{min-height:80px;resize:vertical}
     <input id="loginInput" class="campo" type="text" autocomplete="off" autocapitalize="characters" placeholder="Ej: 244" enterkeyhint="go">
     <div class="error-msg" id="loginError"></div>
     <button class="btn pri full" id="btnIngresar" disabled>Cargando padrón…</button>
-    <div class="login-foot">Jefatura: ingresá con la clave de administración<br><span id="loginConexion">Conectando…</span></div>
+    <div class="login-foot">Jefatura: ingresá con la clave de administración<br><span id="loginConexion">Conectando…</span><br>Versión 29/09 · compartidas</div>
   </div>
 </section>
 
@@ -207,7 +207,7 @@ textarea.campo{min-height:80px;resize:vertical}
       <button class="icon-btn" id="btnTema" title="Cambiar tema">◐</button>
       <button class="icon-btn" id="btnSalir">Salir</button>
     </div>
-    <div class="conexion" id="conexion"><span class="dot"></span><span id="conexionTxt">Conectando…</span></div>
+    <div class="conexion" id="conexion"><span class="dot"></span><span id="conexionTxt">Conectando…</span><span style="margin-left:auto;opacity:.7">v29/09b</span></div>
   </header>
 
   <!-- ===== Vista personal ===== -->
@@ -311,6 +311,7 @@ textarea.campo{min-height:80px;resize:vertical}
             </div>
             <div id="wrapEscuadras"><div class="esc-opciones" id="nEscuadras"></div></div>
             <div id="wrapPersonas" class="oculto">
+              <div class="nota" style="margin-bottom:8px">Si elegís varias personas se crea <b>una sola tarea compartida</b>: la ven todos y cualquiera de ellos puede marcarla completada.</div>
               <div class="chips" id="nSeleccionados" style="margin-bottom:8px"></div>
               <input class="campo" id="nBuscar" type="search" placeholder="Buscar persona…" style="margin-bottom:6px">
               <div class="checklist" id="nChecklist"></div>
@@ -502,12 +503,27 @@ function setConexion(estado, texto){
 // ---------- Escuadras: helpers ----------
 function escuadraPorId(id){ return ESCUADRAS.find(e => e.id === id) || null; }
 function esPersona(t){ return t.tipo === "persona"; }
+// Personas asignadas (una tarea puede ser compartida por varias personas)
+function asignadosDe(t){
+  if(!esPersona(t)) return [];
+  if(Array.isArray(t.asignados) && t.asignados.length) return t.asignados;
+  return t.asignadoNombre ? [t.asignadoNombre] : [];
+}
+function esCompartida(t){ return asignadosDe(t).length > 1; }
 function nombreEsc(t){
-  if(esPersona(t)) return t.asignadoNombre || "Persona";
+  if(esPersona(t)){
+    const a = asignadosDe(t);
+    if(a.length <= 1) return a[0] || "Persona";
+    return a.map(corto).join(", ");
+  }
   const e = escuadraPorId(t.escuadraId); return e ? e.nombre : (t.escuadraNombre || "Escuadra eliminada");
 }
-function claveResp(t){ return esPersona(t) ? "p:" + t.asignadoNombre : "e:" + t.escuadraId; }
-function etiquetaResp(t){ return esPersona(t) ? "👤 " + corto(t.asignadoNombre || "") : nombreEsc(t); }
+// Responsables para gráficos y filtros: en una tarea compartida cuenta para cada persona
+function responsablesDe(t){
+  if(esPersona(t)) return asignadosDe(t).map(n => ({clave:"p:" + n, etiqueta:"👤 " + corto(n)}));
+  return [{clave:"e:" + t.escuadraId, etiqueta:nombreEsc(t)}];
+}
+function claveResp(t){ return responsablesDe(t).map(r => r.clave); }
 function jefeDe(t){ if(esPersona(t)) return null; const e = escuadraPorId(t.escuadraId); return e ? e.jefe : null; }
 function misEscuadras(){
   if(!SESION || SESION.rol !== "personal") return [];
@@ -516,7 +532,7 @@ function misEscuadras(){
 function puedeCerrar(t){
   if(!SESION) return false;
   if(SESION.rol === "jefatura") return true;
-  if(esPersona(t)) return t.asignadoNombre === SESION.name;
+  if(esPersona(t)) return asignadosDe(t).includes(SESION.name);
   return jefeDe(t) === SESION.name;
 }
 function corto(n){
@@ -595,7 +611,8 @@ async function sincronizarAspirantes(){
       const candidatos = list.filter(p => lpNum(lpDe(p)) == null &&
         (!p.grado || /aspirante/i.test(p.grado)) && apellido1(p.name) === apellido1(a.name));
       if(candidatos.length === 1){
-        candidatos[0].lp = a.lp;
+        if(candidatos[0].legajo !== undefined && candidatos[0].lp === undefined) candidatos[0].legajo = a.lp;
+        else candidatos[0].lp = a.lp;
         if(!candidatos[0].grado) candidatos[0].grado = "Aspirante";
       } else if(candidatos.length === 0){
         list.push({name:a.name, lp:a.lp, grado:"Aspirante"});
@@ -617,8 +634,13 @@ async function sincronizarAspirantes(){
 async function cargarPadron(){
   setConexion("", "Conectando…");
   try{
-    try{ const c = await sincronizarAspirantes(); if(c) console.log("Aspirantes actualizados en el padrón:", c); }
-    catch(e){ console.warn("No se pudo sincronizar aspirantes", e); }
+    try{
+      const c = await sincronizarAspirantes();
+      if(c){ console.log("Aspirantes actualizados en el padrón:", c); setTimeout(() => toast("Padrón actualizado: " + c + " aspirantes con legajo provisorio"), 400); }
+    }catch(e){
+      console.warn("No se pudo sincronizar aspirantes", e);
+      setTimeout(() => toast("No se pudieron cargar los legajos de aspirantes: " + (e && e.code ? e.code : "error de conexión")), 400);
+    }
     const snap = await db.collection("meta").doc("personal").get();
     const list = snap.exists ? (snap.data().list || []) : [];
     PADRON = list.map(p => {
@@ -696,7 +718,7 @@ function montarApp(){
 function filtrarVisibles(){
   if(SESION && SESION.rol === "personal"){
     const ids = misEscuadras().map(e => e.id);
-    TAREAS = TAREAS_TODAS.filter(t => esPersona(t) ? t.asignadoNombre === SESION.name : ids.includes(t.escuadraId));
+    TAREAS = TAREAS_TODAS.filter(t => esPersona(t) ? asignadosDe(t).includes(SESION.name) : ids.includes(t.escuadraId));
   } else {
     TAREAS = TAREAS_TODAS.slice();
   }
@@ -745,13 +767,22 @@ function cardTarea(t, conEscuadra){
   return '<article class="tarea prio-' + esc(t.prioridad) + '" data-id="' + t.id + '">' +
     '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
     '<h3>' + esc(t.titulo) + '</h3>' +
-    (conEscuadra ? '<div class="t-esc">' + (esPersona(t)
-        ? '👤 ' + esc(SESION && SESION.name === t.asignadoNombre ? "Asignada a vos" : t.asignadoNombre) + ' · individual'
-        : esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe')) + '</div>' : '') +
+    (conEscuadra ? '<div class="t-esc">' + etiquetaCard(t, jefe) + '</div>' : '') +
     '<div class="t-fechas">Inicio ' + fFecha(t.inicioMs) + ' → Límite ' + fFecha(t.limiteMs) + '</div>' +
     '<div class="barra"><span class="' + barra + '" style="width:' + Math.round(frac*100) + '%"></span></div>' +
     '<div class="t-rest ' + colorRest + '">' + restante(t, now) + '</div>' +
   '</article>';
+}
+function etiquetaCard(t, jefe){
+  if(!esPersona(t)) return esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe');
+  const a = asignadosDe(t);
+  const yo = SESION && SESION.rol === "personal" ? SESION.name : null;
+  if(a.length <= 1) return '👤 ' + esc(yo && a[0] === yo ? "Asignada a vos" : (a[0] || "")) + ' · individual';
+  if(yo && a.includes(yo)){
+    const otros = a.filter(n => n !== yo);
+    return '👥 Compartida: vos + ' + esc(otros.map(corto).join(", "));
+  }
+  return '👥 Compartida (' + a.length + '): ' + esc(a.map(corto).join(", "));
 }
 function vacio(txt){ return '<div class="vacio">' + txt + '</div>'; }
 document.addEventListener("click", e => {
@@ -858,9 +889,12 @@ function renderTablero(){
   // Pendientes por escuadra
   const pend = {};
   act.forEach(t => {
-    const k = etiquetaResp(t);
-    if(!pend[k]) pend[k] = {plazo:0, venc:0};
-    if(estadoDe(t, now) === "vencida") pend[k].venc++; else pend[k].plazo++;
+    const vencida = estadoDe(t, now) === "vencida";
+    responsablesDe(t).forEach(r => {
+      const k = r.etiqueta;
+      if(!pend[k]) pend[k] = {plazo:0, venc:0};
+      if(vencida) pend[k].venc++; else pend[k].plazo++;
+    });
   });
   const pendArr = Object.entries(pend).sort((a,b) => (b[1].venc+b[1].plazo) - (a[1].venc+a[1].plazo) || b[1].venc - a[1].venc);
   $("wrapPend").style.height = Math.max(200, pendArr.length * 32 + 70) + "px";
@@ -881,10 +915,12 @@ function renderTablero(){
   // Tiempo de respuesta por escuadra
   const resp = {};
   comp.forEach(t => {
-    const k = etiquetaResp(t);
-    if(!resp[k]) resp[k] = {sum:0, n:0, ok:0};
-    resp[k].sum += Math.max(0, t.completadaMs - t.inicioMs); resp[k].n++;
-    if(t.completadaMs <= t.limiteMs) resp[k].ok++;
+    responsablesDe(t).forEach(r => {
+      const k = r.etiqueta;
+      if(!resp[k]) resp[k] = {sum:0, n:0, ok:0};
+      resp[k].sum += Math.max(0, t.completadaMs - t.inicioMs); resp[k].n++;
+      if(t.completadaMs <= t.limiteMs) resp[k].ok++;
+    });
   });
   const respArr = Object.entries(resp).map(x => [x[0], x[1].sum / x[1].n, x[1]]).sort((a,b) => b[1] - a[1]);
   const enDias = respArr.some(x => x[1] > 48*3600000);
@@ -939,7 +975,7 @@ function renderTablero(){
 function renderTareas(){
   const now = Date.now();
   const sel = $("fEscuadra"); const actual = sel.value;
-  const personas = [...new Set(TAREAS.filter(esPersona).map(t => t.asignadoNombre))].sort((a,b) => a.localeCompare(b, "es"));
+  const personas = [...new Set([].concat(...TAREAS.filter(esPersona).map(asignadosDe)))].sort((a,b) => a.localeCompare(b, "es"));
   const op = (v, l) => '<option value="' + esc(v) + '"' + (v === actual ? ' selected' : '') + '>' + esc(l) + '</option>';
   sel.innerHTML = '<option value="">Todos los responsables</option>' +
     (ESCUADRAS.length ? '<optgroup label="Escuadras">' + ESCUADRAS.map(e => op("e:" + e.id, e.nombre)).join("") + '</optgroup>' : '') +
@@ -950,7 +986,7 @@ function renderTareas(){
     const e = estadoDe(t, now);
     if(fe === "activas" && e === "completada") return false;
     if(fe !== "activas" && fe !== "todas" && e !== fe) return false;
-    if(fs && claveResp(t) !== fs) return false;
+    if(fs && !claveResp(t).includes(fs)) return false;
     if(txt && !((t.titulo||"") + " " + (t.descripcion||"") + " " + nombreEsc(t)).toLowerCase().includes(txt)) return false;
     return true;
   });
@@ -1108,7 +1144,7 @@ function renderPerOpciones(){
 $("nBuscar").addEventListener("input", renderPerOpciones);
 $("nChecklist").addEventListener("change", e => {
   const cb = e.target; if(!cb.dataset.per) return;
-  if(cb.checked){ if(editandoId) perSel.clear(); perSel.add(cb.dataset.per); }
+  if(cb.checked) perSel.add(cb.dataset.per);
   else perSel.delete(cb.dataset.per);
   renderPerOpciones();
 });
@@ -1152,16 +1188,25 @@ async function guardarTarea(){
   if(tipoSel === "persona" && !perSel.size){ toast("Elegí al menos una persona"); return; }
   if(isNaN(ini) || isNaN(lim)){ toast("Completá fecha de inicio y límite"); return; }
   if(lim <= ini){ toast("El límite tiene que ser posterior al inicio"); return; }
-  // Destinos: cada uno genera una tarea independiente con su propio seguimiento
-  const destinos = tipoSel === "escuadra"
-    ? [...escSel].map(id => escuadraPorId(id)).filter(Boolean).map(e => ({
-        label: e.nombre,
-        campos: {tipo:"escuadra", escuadraId:e.id, escuadraNombre:e.nombre, asignadoNombre:null, asignadoLp:null, asignadoGrado:""}
-      }))
-    : [...perSel].map(n => PADRON.find(p => p.name === n) || {name:n, lp:null, grado:""}).map(p => ({
-        label: p.name,
-        campos: {tipo:"persona", escuadraId:null, escuadraNombre:null, asignadoNombre:p.name, asignadoLp:(p.lp == null ? null : p.lp), asignadoGrado:p.grado || ""}
-      }));
+  // Escuadras: una tarea por escuadra (cada una con su jefe y su seguimiento).
+  // Personas: UNA sola tarea compartida entre todas las personas elegidas.
+  let destinos;
+  if(tipoSel === "escuadra"){
+    destinos = [...escSel].map(id => escuadraPorId(id)).filter(Boolean).map(e => ({
+      label: e.nombre,
+      campos: {tipo:"escuadra", escuadraId:e.id, escuadraNombre:e.nombre, asignados:[], asignadoNombre:null, asignadoLp:null, asignadoGrado:""}
+    }));
+  } else {
+    const ps = [...perSel].sort((a,b) => a.localeCompare(b, "es")).map(n => PADRON.find(p => p.name === n) || {name:n, lp:null, grado:""});
+    destinos = ps.length ? [{
+      label: ps.length > 1 ? ps.map(p => corto(p.name)).join(", ") : ps[0].name,
+      campos: {tipo:"persona", escuadraId:null, escuadraNombre:null,
+        asignados: ps.map(p => p.name),
+        asignadoNombre: ps[0].name,
+        asignadoLp: ps.length === 1 && ps[0].lp != null ? ps[0].lp : null,
+        asignadoGrado: ps.length === 1 ? (ps[0].grado || "") : ""}
+    }] : [];
+  }
   if(!destinos.length){ toast("Elegí a quién asignar la tarea"); return; }
   const btn = $("btnGuardar"); btn.disabled = true;
   try{
@@ -1186,7 +1231,8 @@ async function guardarTarea(){
         }, d.campos));
       });
       await batch.commit();
-      toast(destinos.length > 1 ? "Tarea asignada a " + destinos.length + (tipoSel === "escuadra" ? " escuadras" : " personas") : "Tarea asignada");
+      toast(tipoSel === "persona" && perSel.size > 1 ? "Tarea compartida asignada a " + perSel.size + " personas"
+        : destinos.length > 1 ? "Tarea asignada a " + destinos.length + " escuadras" : "Tarea asignada");
     }
     limpiarForm();
     $("fEstado").value = "activas"; $("fEscuadra").value = ""; $("fTexto").value = "";
@@ -1203,7 +1249,7 @@ $("btnGuardar").addEventListener("click", guardarTarea);
 function editarTarea(t){
   editandoId = t.id;
   escSel = new Set(!esPersona(t) && escuadraPorId(t.escuadraId) ? [t.escuadraId] : []);
-  perSel = new Set(esPersona(t) ? [t.asignadoNombre] : []);
+  perSel = new Set(asignadosDe(t));
   prioSel = t.prioridad || "media";
   $("nTitulo").value = t.titulo || "";
   $("nDesc").value = t.descripcion || "";
@@ -1244,6 +1290,7 @@ function abrirDetalle(id){
   if(t.estado !== "completada"){
     if(cierra){
       acc += '<button class="btn ok ancho" data-acc="completar">✓ Marcar completada</button>';
+      if(esCompartida(t) && !jef) acc += '<div class="aviso">Tarea compartida: al marcarla completada queda cerrada para todos los asignados.</div>';
     } else {
       acc += '<div class="aviso">Solo el jefe de escuadra' + (jefe ? ' (' + esc(jefe) + ')' : '') + ' o Jefatura pueden marcarla como completada. Podés dejar una nota con novedades.</div>';
     }
@@ -1262,8 +1309,7 @@ function abrirDetalle(id){
     (t.descripcion ? '<div class="det-desc">' + esc(t.descripcion) + '</div>' : '') +
     '<div class="det-grid">' +
       (esPersona(t)
-        ? '<div><span class="etq">Asignada a</span><b>' + esc(t.asignadoNombre) + '</b></div>' +
-          '<div><span class="etq">Tipo</span><b>Individual</b></div>'
+        ? '<div style="grid-column:1/-1"><span class="etq">' + (esCompartida(t) ? 'Compartida entre ' + asignadosDe(t).length + ' personas' : 'Asignada a (individual)') + '</span><b>' + asignadosDe(t).map(esc).join('<br>') + '</b></div>'
         : '<div><span class="etq">Escuadra</span><b>' + esc(nombreEsc(t)) + '</b></div>' +
           '<div><span class="etq">Jefe de escuadra</span><b>' + esc(jefe || "Sin asignar") + '</b></div>') +
       '<div><span class="etq">Inicio del plazo</span><b>' + fFecha(t.inicioMs) + '</b></div>' +
@@ -1296,7 +1342,7 @@ async function accion(acc, btn){
     const txt = "*BVC · Tarea asignada*\n" +
       "*" + t.titulo + "*\n" +
       (t.descripcion ? t.descripcion + "\n" : "") +
-      (esPersona(t) ? "\nAsignada a: " + t.asignadoNombre : "\nEscuadra: " + nombreEsc(t) + (jefe ? "\nResponsable: " + jefe : "")) +
+      (esPersona(t) ? (esCompartida(t) ? "\nTarea compartida: " : "\nAsignada a: ") + asignadosDe(t).join(", ") :"\nEscuadra: " + nombreEsc(t) + (jefe ? "\nResponsable: " + jefe : "")) +
       "\nInicio: " + fFecha(t.inicioMs) +
       "\nLímite: " + fFecha(t.limiteMs) +
       "\n" + (PRIO[t.prioridad] || "") +
