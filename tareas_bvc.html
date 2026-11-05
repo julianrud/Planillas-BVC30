@@ -188,12 +188,12 @@ textarea.campo{min-height:80px;resize:vertical}
 <section id="login">
   <div class="login-card">
     <h1>Registro de<br><span>Tareas</span></h1>
-    <p>Bomberos Voluntarios de Cañuelas. Ingresá con tu número de legajo para ver las tareas de tu escuadra.</p>
+    <p>Bomberos Voluntarios de Cañuelas. Ingresá con tu número de legajo para ver tus tareas y las de tu escuadra.</p>
     <label class="etq" for="loginInput">Legajo</label>
     <input id="loginInput" class="campo" type="text" autocomplete="off" autocapitalize="characters" placeholder="Ej: 244" enterkeyhint="go">
     <div class="error-msg" id="loginError"></div>
     <button class="btn pri full" id="btnIngresar" disabled>Cargando padrón…</button>
-    <div class="login-foot">Jefatura: ingresá con la clave de administración<br><span id="loginConexion">Conectando…</span><br>Versión 29/09 · compartidas</div>
+    <div class="login-foot">Jefatura: ingresá con la clave de administración<br><span id="loginConexion">Conectando…</span><br>Versión 05/11</div>
   </div>
 </section>
 
@@ -207,7 +207,7 @@ textarea.campo{min-height:80px;resize:vertical}
       <button class="icon-btn" id="btnTema" title="Cambiar tema">◐</button>
       <button class="icon-btn" id="btnSalir">Salir</button>
     </div>
-    <div class="conexion" id="conexion"><span class="dot"></span><span id="conexionTxt">Conectando…</span><span style="margin-left:auto;opacity:.7">v29/09b</span></div>
+    <div class="conexion" id="conexion"><span class="dot"></span><span id="conexionTxt">Conectando…</span><span style="margin-left:auto;opacity:.7">v05/11</span></div>
   </header>
 
   <!-- ===== Vista personal ===== -->
@@ -268,7 +268,7 @@ textarea.campo{min-height:80px;resize:vertical}
       <!-- Tareas -->
       <section id="tab-tareas" class="oculto">
         <div class="filtros">
-          <input class="campo" id="fTexto" type="search" placeholder="Buscar por título, descripción o escuadra…">
+          <input class="campo" id="fTexto" type="search" placeholder="Buscar por título, descripción o responsable…">
           <select class="campo" id="fEstado">
             <option value="activas">Activas (todas)</option>
             <option value="vencida">Vencidas</option>
@@ -313,7 +313,7 @@ textarea.campo{min-height:80px;resize:vertical}
             <div id="wrapPersonas" class="oculto">
               <div class="nota" style="margin-bottom:8px">Si elegís varias personas se crea <b>una sola tarea compartida</b>: la ven todos y cualquiera de ellos puede marcarla completada.</div>
               <div class="chips" id="nSeleccionados" style="margin-bottom:8px"></div>
-              <input class="campo" id="nBuscar" type="search" placeholder="Buscar persona…" style="margin-bottom:6px">
+              <input class="campo" id="nBuscar" type="search" placeholder="Buscar persona o legajo…" style="margin-bottom:6px">
               <div class="checklist" id="nChecklist"></div>
             </div>
           </div>
@@ -385,7 +385,7 @@ textarea.campo{min-height:80px;resize:vertical}
       </div>
       <div>
         <span class="etq">Integrantes <span id="eCount" style="color:var(--amarillo)"></span></span>
-        <input class="campo" id="eBuscar" type="search" placeholder="Buscar persona…" style="margin-bottom:6px">
+        <input class="campo" id="eBuscar" type="search" placeholder="Buscar persona o legajo…" style="margin-bottom:6px">
         <div class="checklist" id="eChecklist"></div>
       </div>
       <div class="acciones">
@@ -400,7 +400,7 @@ textarea.campo{min-height:80px;resize:vertical}
 
 <script>
 // ============================================================
-//  BVC · Registro de Tareas por escuadra — Firebase compat (bvc-despacho)
+//  BVC · Registro de Tareas (por escuadra o persona) — Firebase compat (bvc-despacho)
 // ============================================================
 const firebaseConfig = {
   apiKey: "AIzaSyA_X-RBYpJUJWz7vFJz4-i8lX1lNXov6bM",
@@ -427,8 +427,22 @@ const SEED_ESCUADRAS = [
   {id:"ayudantia",    nombre:"Ayudantía y Personal",      desc:"Partes, legajos, asistencia y documentación del cuerpo activo"}
 ].map(e => Object.assign({jefe:null, integrantes:[]}, e));
 
+// Aspirantes con legajo provisorio (Listado Personal, Numerarios Cuartel Central)
+const ASPIRANTES_PROVISORIOS = [
+  {lp:"30/0001", name:"Gomez, Luz Maiara"},
+  {lp:"30/0002", name:"Nuttini, Bruno Damian"},
+  {lp:"30/0003", name:"Pia, Micaela Rocio"},
+  {lp:"30/0004", name:"Garcia, Salvador"},
+  {lp:"30/0005", name:"Quiroga, Nazareno Luis"},
+  {lp:"30/0006", name:"Olea, Gloria Elizabeth"},
+  {lp:"30/0007", name:"Orellano, Silvia Marianela"},
+  {lp:"30/0008", name:"Trejo, Aixa Yazmin"},
+  {lp:"30/0009", name:"Serrano Javorsky, Amor Ayelen"},
+  {lp:"30/0010", name:"Santiago, Rodolfo Anibal"}
+];
+
 const ESTADOS = {
-  pendiente:  {l:"Pendiente",  c:"amarillo"},
+  pendiente:  {l:"En curso",   c:"amarillo"},
   en_curso:   {l:"En curso",   c:"amarillo"},
   programada: {l:"Programada", c:"gris"},
   vencida:    {l:"Vencida",    c:"rojo"},
@@ -460,6 +474,7 @@ function lsGet(k){ try{ return localStorage.getItem(k); }catch(e){ return null; 
 function lsSet(k,v){ try{ localStorage.setItem(k,v); }catch(e){} }
 function lsDel(k){ try{ localStorage.removeItem(k); }catch(e){} }
 function esc(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function normTxt(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
 function lpNum(v){
   if(v === null || v === undefined || v === "") return null;
   const s = String(v).trim();
@@ -468,9 +483,17 @@ function lpNum(v){
   return parseInt(parte, 10);
 }
 function lpTexto(v){ const n = lpNum(v); return n == null ? "s/legajo" : "30/" + String(n).padStart(4,"0"); }
+// Búsqueda sin distinguir acentos ni mayúsculas, por nombre o por legajo
+function coincide(p, q){
+  if(!q) return true;
+  const nq = normTxt(q);
+  if(normTxt(p.name).includes(nq)) return true;
+  const n = lpNum(q);
+  return n != null && lpNum(p.lp) === n;
+}
 function toast(msg){
   const t = $("toast"); t.textContent = msg; t.classList.add("ver");
-  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("ver"), 2800);
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("ver"), 3200);
 }
 function fNum(x){ return (Math.round(x*10)/10).toString().replace(".", ","); }
 function fDur(ms){
@@ -491,7 +514,12 @@ function toLocalInput(ms){
 }
 function fromLocalInput(s){ return s ? new Date(s).getTime() : NaN; }
 function hist(txt){ return {ms: Date.now(), quien: SESION ? SESION.name : "", txt: txt}; }
-function gradoDe(nombre){ const p = PADRON.find(x => x.name === nombre); return p ? p.grado : ""; }
+function corto(n){
+  const partes = String(n).split(",");
+  if(partes.length < 2) return n;
+  const nom = partes[1].trim();
+  return partes[0].trim() + (nom ? " " + nom[0] + "." : "");
+}
 
 function setConexion(estado, texto){
   const el = $("conexion"); el.classList.remove("ok","error");
@@ -500,10 +528,9 @@ function setConexion(estado, texto){
   $("loginConexion").textContent = texto;
 }
 
-// ---------- Escuadras: helpers ----------
+// ---------- Responsables: escuadra o persona(s) ----------
 function escuadraPorId(id){ return ESCUADRAS.find(e => e.id === id) || null; }
 function esPersona(t){ return t.tipo === "persona"; }
-// Personas asignadas (una tarea puede ser compartida por varias personas)
 function asignadosDe(t){
   if(!esPersona(t)) return [];
   if(Array.isArray(t.asignados) && t.asignados.length) return t.asignados;
@@ -518,7 +545,7 @@ function nombreEsc(t){
   }
   const e = escuadraPorId(t.escuadraId); return e ? e.nombre : (t.escuadraNombre || "Escuadra eliminada");
 }
-// Responsables para gráficos y filtros: en una tarea compartida cuenta para cada persona
+// En una tarea compartida cuenta para cada persona asignada
 function responsablesDe(t){
   if(esPersona(t)) return asignadosDe(t).map(n => ({clave:"p:" + n, etiqueta:"👤 " + corto(n)}));
   return [{clave:"e:" + t.escuadraId, etiqueta:nombreEsc(t)}];
@@ -534,12 +561,6 @@ function puedeCerrar(t){
   if(SESION.rol === "jefatura") return true;
   if(esPersona(t)) return asignadosDe(t).includes(SESION.name);
   return jefeDe(t) === SESION.name;
-}
-function corto(n){
-  const partes = String(n).split(",");
-  if(partes.length < 2) return n;
-  const nom = partes[1].trim();
-  return partes[0].trim() + (nom ? " " + nom[0] + "." : "");
 }
 
 // ---------- Tema ----------
@@ -564,12 +585,13 @@ $("btnTema").addEventListener("click", () => {
 });
 
 // ---------- Estado de una tarea ----------
+// El tiempo corre solo desde la fecha de inicio: no hace falta "comenzar"
 function estadoDe(t, now){
   now = now || Date.now();
   if(t.estado === "completada") return "completada";
   if(t.limiteMs < now) return "vencida";
   if(t.inicioMs > now) return "programada";
-  return "en_curso";   // el tiempo corre solo desde el inicio: no hace falta "comenzar"
+  return "en_curso";
 }
 function restante(t, now){
   const e = estadoDe(t, now);
@@ -579,24 +601,13 @@ function restante(t, now){
   return "Vence en " + fDur(t.limiteMs - now);
 }
 
-// ---------- Aspirantes con legajo provisorio (Listado Personal, Numerarios Cuartel Central) ----------
-const ASPIRANTES_PROVISORIOS = [
-  {lp:"30/0001", name:"Gomez, Luz Maiara"},
-  {lp:"30/0002", name:"Nuttini, Bruno Damian"},
-  {lp:"30/0003", name:"Pia, Micaela Rocio"},
-  {lp:"30/0004", name:"Garcia, Salvador"},
-  {lp:"30/0005", name:"Quiroga, Nazareno Luis"},
-  {lp:"30/0006", name:"Olea, Gloria Elizabeth"},
-  {lp:"30/0007", name:"Orellano, Silvia Marianela"},
-  {lp:"30/0008", name:"Trejo, Aixa Yazmin"},
-  {lp:"30/0009", name:"Serrano Javorsky, Amor Ayelen"},
-  {lp:"30/0010", name:"Santiago, Rodolfo Anibal"}
-];
-function normTxt(s){ return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim(); }
+// ---------- Aspirantes: legajos provisorios ----------
 function apellido1(n){ return normTxt(String(n).split(",")[0]).split(/\s+/)[0]; }
+function nombres(n){ const p = String(n).split(","); return p.length > 1 ? normTxt(p[1]).split(/\s+/).filter(Boolean) : []; }
 // Suma los aspirantes al padrón compartido (meta/personal). Si el aspirante ya estaba cargado
-// sin legajo (importación de guardias), solo le agrega el legajo y conserva su nombre para no
-// romper las guardias ya asignadas. Es idempotente: si ya está todo cargado, no escribe nada.
+// sin legajo (importación de guardias), le agrega el legajo y conserva su nombre para no romper
+// las guardias asignadas. Si hay más de un candidato, elige el más parecido en vez de saltearlo.
+// Es idempotente: si ya está todo cargado, no escribe nada.
 async function sincronizarAspirantes(){
   const ref = db.collection("meta").doc("personal");
   return db.runTransaction(async tx => {
@@ -608,22 +619,25 @@ async function sincronizarAspirantes(){
     ASPIRANTES_PROVISORIOS.forEach(a => {
       const n = lpNum(a.lp);
       if(list.some(p => lpNum(lpDe(p)) === n)) return;
-      const candidatos = list.filter(p => lpNum(lpDe(p)) == null &&
-        (!p.grado || /aspirante/i.test(p.grado)) && apellido1(p.name) === apellido1(a.name));
-      if(candidatos.length === 1){
-        if(candidatos[0].legajo !== undefined && candidatos[0].lp === undefined) candidatos[0].legajo = a.lp;
-        else candidatos[0].lp = a.lp;
-        if(!candidatos[0].grado) candidatos[0].grado = "Aspirante";
-      } else if(candidatos.length === 0){
-        list.push({name:a.name, lp:a.lp, grado:"Aspirante"});
+      let candidatos = list.filter(p => lpNum(lpDe(p)) == null && apellido1(p.name) === apellido1(a.name));
+      if(candidatos.length > 1){
+        const nomA = nombres(a.name);
+        const porNombre = candidatos.filter(p => nombres(p.name).some(x => nomA.includes(x)));
+        const asp = candidatos.filter(p => !p.grado || /aspirante/i.test(p.grado));
+        const soloApellido = asp.filter(p => !String(p.name).includes(","));
+        candidatos = porNombre.length ? porNombre : (soloApellido.length ? soloApellido : (asp.length ? asp : candidatos));
+      }
+      if(candidatos.length){
+        const c = candidatos[0];
+        if(c.legajo !== undefined && c.lp === undefined) c.legajo = a.lp; else c.lp = a.lp;
+        if(!c.grado) c.grado = "Aspirante";
       } else {
-        console.warn("Aspirante ambiguo, no se asignó legajo:", a.name, candidatos.map(c => c.name));
-        return;
+        list.push({name:a.name, lp:a.lp, grado:"Aspirante"});
       }
       cambios++;
     });
     if(cambios){
-      list.sort((a,b) => String(a.name).localeCompare(String(b.name), "es"));
+      list.sort((x,y) => String(x.name).localeCompare(String(y.name), "es"));
       tx.update(ref, {list: list});
     }
     return cambios;
@@ -636,7 +650,7 @@ async function cargarPadron(){
   try{
     try{
       const c = await sincronizarAspirantes();
-      if(c){ console.log("Aspirantes actualizados en el padrón:", c); setTimeout(() => toast("Padrón actualizado: " + c + " aspirantes con legajo provisorio"), 400); }
+      if(c){ console.log("Aspirantes actualizados en el padrón:", c); setTimeout(() => toast("Padrón actualizado: " + c + " aspirante" + (c > 1 ? "s" : "") + " con legajo provisorio"), 400); }
     }catch(e){
       console.warn("No se pudo sincronizar aspirantes", e);
       setTimeout(() => toast("No se pudieron cargar los legajos de aspirantes: " + (e && e.code ? e.code : "error de conexión")), 400);
@@ -647,7 +661,7 @@ async function cargarPadron(){
       if(typeof p === "string") return {name:p, lp:null, grado:""};
       return {
         name: p.name || p.nombre || "",
-        lp: (p.lp !== undefined ? p.lp : (p.legajo !== undefined ? p.legajo : null)),
+        lp: (p.lp !== undefined && p.lp !== null ? p.lp : (p.legajo !== undefined ? p.legajo : null)),
         grado: p.grado || p.jerarquia || p.rol || ""
       };
     }).filter(p => p.name);
@@ -757,32 +771,28 @@ function render(){
 }
 setInterval(() => { if(SESION && (SESION.rol === "personal" || tabJ !== "nueva")) render(); }, 60000);
 
-function cardTarea(t, conEscuadra){
-  const now = Date.now();
-  const e = estadoDe(t, now); const E = ESTADOS[e];
-  const frac = e === "completada" ? 1 : Math.min(1, Math.max(0, (now - t.inicioMs) / Math.max(1, t.limiteMs - t.inicioMs)));
-  const barra = e === "completada" ? "verde" : e === "vencida" ? "rojo" : frac > 0.75 ? "naranja" : "amarillo";
-  const colorRest = e === "completada" ? (t.completadaMs <= t.limiteMs ? "verde" : "naranja") : E.c;
-  const jefe = jefeDe(t);
-  return '<article class="tarea prio-' + esc(t.prioridad) + '" data-id="' + t.id + '">' +
-    '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
-    '<h3>' + esc(t.titulo) + '</h3>' +
-    (conEscuadra ? '<div class="t-esc">' + etiquetaCard(t, jefe) + '</div>' : '') +
-    '<div class="t-fechas">Inicio ' + fFecha(t.inicioMs) + ' → Límite ' + fFecha(t.limiteMs) + '</div>' +
-    '<div class="barra"><span class="' + barra + '" style="width:' + Math.round(frac*100) + '%"></span></div>' +
-    '<div class="t-rest ' + colorRest + '">' + restante(t, now) + '</div>' +
-  '</article>';
-}
 function etiquetaCard(t, jefe){
   if(!esPersona(t)) return esc(nombreEsc(t)) + (jefe ? ' · ' + esc(jefe) : ' · sin jefe');
   const a = asignadosDe(t);
   const yo = SESION && SESION.rol === "personal" ? SESION.name : null;
   if(a.length <= 1) return '👤 ' + esc(yo && a[0] === yo ? "Asignada a vos" : (a[0] || "")) + ' · individual';
-  if(yo && a.includes(yo)){
-    const otros = a.filter(n => n !== yo);
-    return '👥 Compartida: vos + ' + esc(otros.map(corto).join(", "));
-  }
+  if(yo && a.includes(yo)) return '👥 Compartida: vos + ' + esc(a.filter(n => n !== yo).map(corto).join(", "));
   return '👥 Compartida (' + a.length + '): ' + esc(a.map(corto).join(", "));
+}
+function cardTarea(t){
+  const now = Date.now();
+  const e = estadoDe(t, now); const E = ESTADOS[e];
+  const frac = e === "completada" ? 1 : Math.min(1, Math.max(0, (now - t.inicioMs) / Math.max(1, t.limiteMs - t.inicioMs)));
+  const barra = e === "completada" ? "verde" : e === "vencida" ? "rojo" : frac > 0.75 ? "naranja" : "amarillo";
+  const colorRest = e === "completada" ? (t.completadaMs <= t.limiteMs ? "verde" : "naranja") : E.c;
+  return '<article class="tarea prio-' + esc(t.prioridad) + '" data-id="' + t.id + '">' +
+    '<div class="t-top"><span class="badge ' + E.c + '">' + E.l + '</span><span class="prio">' + (PRIO[t.prioridad] || "") + '</span></div>' +
+    '<h3>' + esc(t.titulo) + '</h3>' +
+    '<div class="t-esc">' + etiquetaCard(t, jefeDe(t)) + '</div>' +
+    '<div class="t-fechas">Inicio ' + fFecha(t.inicioMs) + ' → Límite ' + fFecha(t.limiteMs) + '</div>' +
+    '<div class="barra"><span class="' + barra + '" style="width:' + Math.round(frac*100) + '%"></span></div>' +
+    '<div class="t-rest ' + colorRest + '">' + restante(t, now) + '</div>' +
+  '</article>';
 }
 function vacio(txt){ return '<div class="vacio">' + txt + '</div>'; }
 document.addEventListener("click", e => {
@@ -804,13 +814,12 @@ function renderPersonal(){
     $("listaPersonal").innerHTML = vacio("No tenés tareas asignadas ni estás en ninguna escuadra todavía.<br>Consultá con Jefatura.");
     return;
   }
-  const varias = true;
   if(filtroPersonal === "activas"){
     const lista = act.sort((a,b) => a.limiteMs - b.limiteMs);
-    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("No tenés tareas pendientes. 👍");
+    $("listaPersonal").innerHTML = lista.length ? lista.map(cardTarea).join("") : vacio("No tenés tareas pendientes. 👍");
   } else {
     const lista = comp.sort((a,b) => (b.completadaMs||0) - (a.completadaMs||0));
-    $("listaPersonal").innerHTML = lista.length ? lista.map(t => cardTarea(t, varias)).join("") : vacio("Todavía no hay tareas completadas.");
+    $("listaPersonal").innerHTML = lista.length ? lista.map(cardTarea).join("") : vacio("Todavía no hay tareas completadas.");
   }
 }
 $("segPersonal").addEventListener("click", e => {
@@ -826,7 +835,7 @@ function cambiarTab(tab){
   $("tabsJ").querySelectorAll(".tab").forEach(b => b.classList.toggle("activo", b.dataset.tab === tab));
   ["tablero","tareas","nueva","escuadras"].forEach(t => $("tab-" + t).classList.toggle("oculto", t !== tab));
   window.scrollTo(0, 0);
-  if(tab === "nueva") renderEscOpciones();
+  if(tab === "nueva"){ renderEscOpciones(); renderPerOpciones(); }
   render();
 }
 $("tabsJ").addEventListener("click", e => {
@@ -863,7 +872,7 @@ function lunes(ms){
 function renderTablero(){
   const now = Date.now(); const desde = desdePeriodo(); const C = colores();
   const act = TAREAS.filter(t => t.estado !== "completada");
-  const est = {pendiente:0, en_curso:0, programada:0, vencida:0};
+  const est = {en_curso:0, programada:0, vencida:0};
   act.forEach(t => { est[estadoDe(t, now)]++; });
   const comp = TAREAS.filter(t => t.estado === "completada" && (t.completadaMs || 0) >= desde);
   const tiempos = comp.map(t => Math.max(0, t.completadaMs - t.inicioMs));
@@ -886,7 +895,7 @@ function renderTablero(){
     options:{responsive:true, maintainAspectRatio:false, cutout:"58%", plugins:{legend:{position:"bottom", labels:{boxWidth:12, padding:10}}}}
   });
 
-  // Pendientes por escuadra
+  // Pendientes por responsable
   const pend = {};
   act.forEach(t => {
     const vencida = estadoDe(t, now) === "vencida";
@@ -912,7 +921,7 @@ function renderTablero(){
       plugins:{legend:{position:"bottom", labels:{boxWidth:12}}}}
   });
 
-  // Tiempo de respuesta por escuadra
+  // Tiempo de respuesta por responsable
   const resp = {};
   comp.forEach(t => {
     responsablesDe(t).forEach(r => {
@@ -968,7 +977,7 @@ function renderTablero(){
   });
 
   const venc = act.filter(t => estadoDe(t, now) === "vencida").sort((a,b) => a.limiteMs - b.limiteMs);
-  $("listaVencidas").innerHTML = venc.length ? venc.map(t => cardTarea(t, true)).join("") : vacio("No hay tareas vencidas. 👍");
+  $("listaVencidas").innerHTML = venc.length ? venc.map(cardTarea).join("") : vacio("No hay tareas vencidas. 👍");
 }
 
 // ---------- Lista de tareas (jefatura) ----------
@@ -980,14 +989,14 @@ function renderTareas(){
   sel.innerHTML = '<option value="">Todos los responsables</option>' +
     (ESCUADRAS.length ? '<optgroup label="Escuadras">' + ESCUADRAS.map(e => op("e:" + e.id, e.nombre)).join("") + '</optgroup>' : '') +
     (personas.length ? '<optgroup label="Personas">' + personas.map(n => op("p:" + n, n)).join("") + '</optgroup>' : '');
-  const txt = $("fTexto").value.trim().toLowerCase();
+  const txt = normTxt($("fTexto").value);
   const fe = $("fEstado").value; const fs = sel.value;
   const lista = TAREAS.filter(t => {
     const e = estadoDe(t, now);
     if(fe === "activas" && e === "completada") return false;
     if(fe !== "activas" && fe !== "todas" && e !== fe) return false;
     if(fs && !claveResp(t).includes(fs)) return false;
-    if(txt && !((t.titulo||"") + " " + (t.descripcion||"") + " " + nombreEsc(t)).toLowerCase().includes(txt)) return false;
+    if(txt && !normTxt((t.titulo||"") + " " + (t.descripcion||"") + " " + nombreEsc(t) + " " + asignadosDe(t).join(" ")).includes(txt)) return false;
     return true;
   });
   lista.sort((a,b) => {
@@ -996,7 +1005,7 @@ function renderTareas(){
     return ca ? (b.completadaMs||0) - (a.completadaMs||0) : a.limiteMs - b.limiteMs;
   });
   $("fResultado").textContent = lista.length + (lista.length === 1 ? " tarea" : " tareas");
-  $("listaTareas").innerHTML = lista.length ? lista.map(t => cardTarea(t, true)).join("") : vacio("No hay tareas con esos filtros.");
+  $("listaTareas").innerHTML = lista.length ? lista.map(cardTarea).join("") : vacio("No hay tareas con esos filtros.");
 }
 ["fTexto","fEstado","fEscuadra"].forEach(id => $(id).addEventListener("input", renderTareas));
 
@@ -1061,15 +1070,15 @@ function abrirEscuadra(id){
   abrirModal("modalEsc");
 }
 function renderEChecklist(){
-  const q = $("eBuscar").value.trim().toLowerCase();
+  const q = $("eBuscar").value.trim();
   const jefe = $("eJefe").value;
-  const lista = PADRON.filter(p => p.name !== jefe && (!q || p.name.toLowerCase().includes(q)));
+  escIntegrantes.delete(jefe);
+  const lista = PADRON.filter(p => p.name !== jefe && coincide(p, q));
   lista.sort((a,b) => (escIntegrantes.has(b.name) ? 1 : 0) - (escIntegrantes.has(a.name) ? 1 : 0) || a.name.localeCompare(b.name, "es"));
   $("eChecklist").innerHTML = lista.length ? lista.map(p =>
     '<label><input type="checkbox" data-name="' + esc(p.name) + '"' + (escIntegrantes.has(p.name) ? " checked" : "") + '>' +
     '<span>' + esc(p.name) + '<span class="g">' + esc(p.grado || "") + ' · ' + lpTexto(p.lp) + '</span></span></label>'
   ).join("") : '<div class="vacio" style="border:none">Sin resultados</div>';
-  escIntegrantes.delete(jefe);
   $("eCount").textContent = "(" + escIntegrantes.size + ")";
 }
 $("eBuscar").addEventListener("input", renderEChecklist);
@@ -1131,27 +1140,6 @@ function contarSel(){
   const pal = tipoSel === "escuadra" ? "escuadra" : "persona";
   $("nSelCount").textContent = n ? "(" + n + " " + pal + (n > 1 ? "s" : "") + ")" : "";
 }
-function renderPerOpciones(){
-  const q = $("nBuscar").value.trim().toLowerCase();
-  const lista = PADRON.filter(p => !q || p.name.toLowerCase().includes(q));
-  $("nChecklist").innerHTML = lista.length ? lista.map(p =>
-    '<label><input type="checkbox" data-per="' + esc(p.name) + '"' + (perSel.has(p.name) ? " checked" : "") + '>' +
-    '<span>' + esc(p.name) + '<span class="g">' + esc(p.grado || "") + ' · ' + lpTexto(p.lp) + '</span></span></label>'
-  ).join("") : '<div class="vacio" style="border:none">Sin resultados</div>';
-  $("nSeleccionados").innerHTML = [...perSel].map(n => '<button class="chip sel" data-quitar="' + esc(n) + '">' + esc(corto(n)) + ' ✕</button>').join("");
-  contarSel();
-}
-$("nBuscar").addEventListener("input", renderPerOpciones);
-$("nChecklist").addEventListener("change", e => {
-  const cb = e.target; if(!cb.dataset.per) return;
-  if(cb.checked) perSel.add(cb.dataset.per);
-  else perSel.delete(cb.dataset.per);
-  renderPerOpciones();
-});
-$("nSeleccionados").addEventListener("click", e => {
-  const c = e.target.closest("[data-quitar]"); if(!c) return;
-  perSel.delete(c.dataset.quitar); renderPerOpciones();
-});
 function pintarPrio(){ $("nPrio").querySelectorAll(".chip").forEach(c => c.classList.toggle("activo", c.dataset.p === prioSel)); }
 $("nPrio").addEventListener("click", e => { const c = e.target.closest(".chip"); if(!c) return; prioSel = c.dataset.p; pintarPrio(); });
 $("nPlazos").addEventListener("click", e => {
@@ -1175,6 +1163,26 @@ $("nEscuadras").addEventListener("change", e => {
   if(cb.checked){ if(editandoId) escSel.clear(); escSel.add(cb.dataset.esc); }
   else escSel.delete(cb.dataset.esc);
   renderEscOpciones();
+});
+function renderPerOpciones(){
+  const q = $("nBuscar").value.trim();
+  const lista = PADRON.filter(p => coincide(p, q));
+  $("nChecklist").innerHTML = lista.length ? lista.map(p =>
+    '<label><input type="checkbox" data-per="' + esc(p.name) + '"' + (perSel.has(p.name) ? " checked" : "") + '>' +
+    '<span>' + esc(p.name) + '<span class="g">' + esc(p.grado || "") + ' · ' + lpTexto(p.lp) + '</span></span></label>'
+  ).join("") : '<div class="vacio" style="border:none">Sin resultados</div>';
+  $("nSeleccionados").innerHTML = [...perSel].map(n => '<button class="chip sel" data-quitar="' + esc(n) + '">' + esc(corto(n)) + ' ✕</button>').join("");
+  contarSel();
+}
+$("nBuscar").addEventListener("input", renderPerOpciones);
+$("nChecklist").addEventListener("change", e => {
+  const cb = e.target; if(!cb.dataset.per) return;
+  if(cb.checked) perSel.add(cb.dataset.per); else perSel.delete(cb.dataset.per);
+  renderPerOpciones();
+});
+$("nSeleccionados").addEventListener("click", e => {
+  const c = e.target.closest("[data-quitar]"); if(!c) return;
+  perSel.delete(c.dataset.quitar); renderPerOpciones();
 });
 $("btnCancelarEd").addEventListener("click", () => { limpiarForm(); cambiarTab("tareas"); });
 
@@ -1226,7 +1234,7 @@ async function guardarTarea(){
       destinos.forEach(d => {
         batch.set(db.collection("tareas").doc(), Object.assign({
           titulo:titulo, descripcion:desc, prioridad:prioSel, inicioMs:ini, limiteMs:lim,
-          estado:"pendiente", creadaMs:now, creadaPor:SESION.name, tomadaMs:null, completadaMs:null, completadaPor:null,
+          estado:"en_curso", creadaMs:now, creadaPor:SESION.name, completadaMs:null, completadaPor:null,
           grupo:grupo, historial:[{ms:now, quien:SESION.name, txt:"Tarea asignada a " + d.label}]
         }, d.campos));
       });
@@ -1315,7 +1323,6 @@ function abrirDetalle(id){
       '<div><span class="etq">Inicio del plazo</span><b>' + fFecha(t.inicioMs) + '</b></div>' +
       '<div><span class="etq">Límite</span><b>' + fFecha(t.limiteMs) + '</b></div>' +
       '<div><span class="etq">Asignó</span><b>' + esc(t.creadaPor || "—") + '</b></div>' +
-      (t.tomadaMs ? '<div><span class="etq">Comenzó</span><b>' + fFecha(t.tomadaMs) + '</b></div>' : '') +
       (t.completadaMs ? '<div><span class="etq">Completada</span><b>' + fFecha(t.completadaMs) + (t.completadaPor ? '<br>' + esc(t.completadaPor) : '') + '</b></div>' : '') +
     '</div>' +
     '<span class="etq">Historial</span>' +
@@ -1342,7 +1349,7 @@ async function accion(acc, btn){
     const txt = "*BVC · Tarea asignada*\n" +
       "*" + t.titulo + "*\n" +
       (t.descripcion ? t.descripcion + "\n" : "") +
-      (esPersona(t) ? (esCompartida(t) ? "\nTarea compartida: " : "\nAsignada a: ") + asignadosDe(t).join(", ") :"\nEscuadra: " + nombreEsc(t) + (jefe ? "\nResponsable: " + jefe : "")) +
+      (esPersona(t) ? (esCompartida(t) ? "\nTarea compartida: " : "\nAsignada a: ") + asignadosDe(t).join(", ") : "\nEscuadra: " + nombreEsc(t) + (jefe ? "\nResponsable: " + jefe : "")) +
       "\nInicio: " + fFecha(t.inicioMs) +
       "\nLímite: " + fFecha(t.limiteMs) +
       "\n" + (PRIO[t.prioridad] || "") +
@@ -1357,14 +1364,11 @@ async function accion(acc, btn){
   if(btn) btn.disabled = true;
   try{
     const now = Date.now();
-    if(acc === "comenzar"){
-      await ref.update({estado:"en_curso", tomadaMs:now, historial:AU(hist("Comenzó la tarea" + (nota ? ": " + nota : "")))});
-      toast("Tarea en curso");
-    } else if(acc === "completar"){
+    if(acc === "completar"){
       await ref.update({estado:"completada", completadaMs:now, completadaPor:SESION.name, historial:AU(hist("Marcada como completada" + (nota ? ": " + nota : "")))});
       toast("¡Tarea completada!");
     } else if(acc === "reabrir"){
-      await ref.update({estado:(t.tomadaMs ? "en_curso" : "pendiente"), completadaMs:null, completadaPor:null, historial:AU(hist("Reabierta" + (nota ? ": " + nota : "")))});
+      await ref.update({estado:"en_curso", completadaMs:null, completadaPor:null, historial:AU(hist("Reabierta" + (nota ? ": " + nota : "")))});
       toast("Tarea reabierta");
     } else if(acc === "nota"){
       await ref.update({historial:AU(hist(nota))});
